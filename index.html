@@ -635,6 +635,7 @@ g.n.lhn.cur g{--hf:var(--felt);--hl:#FFF8EE}
       <a href="#plan" data-v="plan">Plan</a>
       <a href="#learn" data-v="learn">Learn</a>
     </div>
+    <button class="btn small" id="fs-btn" aria-label="Full screen" hidden>⛶ Full screen</button>
   </div>
   <div class="sess" id="sess" hidden>
     <div class="sess-in">
@@ -722,7 +723,7 @@ g.n.lhn.cur g{--hf:var(--felt);--hl:#FFF8EE}
         <button data-mode="step" aria-pressed="true"><b>Step</b><span>waits for you</span></button>
         <button data-mode="play" aria-pressed="false"><b>Play along</b><span>in time</span></button>
       </div>
-      <div class="row go-row"><button class="btn primary big" id="p-go">▶ Start</button><span class="clean" id="p-clean"></span></div>
+      <div class="row go-row"><button class="btn primary big" id="p-go">▶ Start</button><label class="tog"><input type="checkbox" id="opt-loop2"> Keep going until I press Stop</label><span class="clean" id="p-clean"></span></div>
       <div class="tempo-row">
         <button class="btn small" id="t-minus" aria-label="Slower">−</button>
         <input type="range" id="tempo" min="25" max="125" step="5" value="60" aria-label="Tempo, percent of full speed">
@@ -736,8 +737,8 @@ g.n.lhn.cur g{--hf:var(--felt);--hl:#FFF8EE}
           <span class="small muted">You play</span><span class="seg" role="group" aria-label="You play" id="h-hands"><button data-v="r" aria-pressed="true">Right hand</button><button data-v="l" aria-pressed="false">Left hand</button><button data-v="b" aria-pressed="false">Both</button></span>
           <span class="small muted">Left hand</span><span class="seg" role="group" aria-label="Left hand" id="h-lh"><button data-v="off" aria-pressed="false">Off</button><button data-v="app" aria-pressed="true">App plays</button><button data-v="root" aria-pressed="false">Root</button><button data-v="fifth" aria-pressed="false">Root + 5th</button><button data-v="triad" aria-pressed="false">Chord</button><button data-v="oompah" aria-pressed="false">Oom-pah</button><button data-v="broken" aria-pressed="false">Broken</button></span>
           <span class="small muted">Key glow</span><span class="seg" role="group" aria-label="Key glow" id="h-glow"><button data-v="on" aria-pressed="true">Always</button><button data-v="stuck" aria-pressed="false">If stuck</button><button data-v="off" aria-pressed="false">Off</button></span>
-          <span class="small muted">Fingers</span><span class="seg" role="group" aria-label="Finger numbers" id="h-fingers"><button data-v="all" aria-pressed="false">All</button><button data-v="shift" aria-pressed="true">Hand moves</button><button data-v="off" aria-pressed="false">Off</button></span>
-          <span class="small muted">Note size</span><span class="seg" role="group" aria-label="Note size" id="h-size"><button data-v="s" aria-pressed="false">Small</button><button data-v="m" aria-pressed="true">Medium</button><button data-v="l" aria-pressed="false">Large</button></span>
+          <span class="small muted">Fingers</span><span class="seg" role="group" aria-label="Finger numbers" id="h-fingers"><button data-v="all" aria-pressed="true">All</button><button data-v="shift" aria-pressed="false">Hand moves</button><button data-v="off" aria-pressed="false">Off</button></span>
+          <span class="small muted">Note size</span><span class="seg" role="group" aria-label="Note size" id="h-size"><button data-v="s" aria-pressed="false">Small</button><button data-v="m" aria-pressed="false">Medium</button><button data-v="l" aria-pressed="true">Large</button></span>
           <span class="small muted">Show</span><span class="row"><label class="tog"><input type="checkbox" id="opt-counts"> Counting (1 & 2 &)</label><label class="tog"><input type="checkbox" id="opt-memory"> From memory</label></span>
           <span class="small muted">Sound</span><span class="row"><label class="tog"><input type="checkbox" id="opt-guide" checked> Guide melody</label><label class="tog"><input type="checkbox" id="opt-click" checked> Click</label><label class="tog"><input type="checkbox" id="opt-loop"> Loop</label></span>
           <span class="small muted">Echo</span><span class="seg" role="group" aria-label="Echo answer" id="h-echo"><button data-v="sing" aria-pressed="true">I sing it back</button><button data-v="play" aria-pressed="false">I play it back</button></span>
@@ -2246,8 +2247,8 @@ const Player = (() => {
   const svg = $('#sheet-svg'), sheet = $('#sheet'), msg = $('#p-msg'), countEl = $('#countin'), goB = $('#p-go'), fab = $('#fab'), rateEl = $('#rate'), peekB = $('#p-peek');
   const st = {
     song: SONGS[0], part: 0, phrase: 0, mode: 'step', pct: 60,
-    hands: lsGet('stk.hands') || 'r', lh: lsGet('stk.lh2') || 'app', glow: lsGet('stk.glow') || 'on', fingers: lsGet('stk.fingers') || 'shift',
-    counts: lsGet('stk.counts') === '1', size: lsGet('stk.size') || 'm', memory: false, guide: true, click: true, loop: false, auto: lsGet('stk.auto') !== '0', echo: 'sing',
+    hands: lsGet('stk.hands') || 'r', lh: lsGet('stk.lh2') || 'app', glow: lsGet('stk.glow') || 'on', fingers: lsGet('stk.fingers') || 'all',
+    counts: lsGet('stk.counts') === '1', size: lsGet('stk.size') || 'l', memory: false, guide: true, click: true, loop: lsGet('stk.loop') !== '0', auto: lsGet('stk.auto') !== '0', echo: 'sing',
   };
   let lay = null, els = new Map(), run = null, lastLine = -1, ctxExtra = null;
   const subs = [];
@@ -2552,7 +2553,7 @@ const Player = (() => {
     const set = (id, v) => $$('#' + id + ' button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
     set('h-hands', hands()); set('h-size', st.size); set('h-lh', st.lh); set('h-glow', st.glow); set('h-fingers', st.fingers); set('h-echo', st.echo);
     $$('#h-hands button').forEach(b => { b.disabled = !grand() && b.dataset.v !== 'r'; b.title = b.disabled ? 'Choose a left-hand level (Root, Root + 5th or Chord) first' : ''; });
-    $('#opt-counts').checked = st.counts; $('#opt-memory').checked = st.memory; $('#opt-guide').checked = st.guide; $('#opt-click').checked = st.click; $('#opt-loop').checked = st.loop; $('#opt-auto').checked = st.auto;
+    $('#opt-counts').checked = st.counts; $('#opt-memory').checked = st.memory; $('#opt-guide').checked = st.guide; $('#opt-click').checked = st.click; $('#opt-loop').checked = st.loop; $('#opt-loop2').checked = st.loop; $('#opt-auto').checked = st.auto;
   }
   function renderSide() { if (isLib()) { renderHead(); renderParts(); renderRungs(); } renderLib(); }
   function saveLast() { if (isLib()) Store.change(x => { x.last = { song: st.song.id, part: st.part, phrase: st.phrase, mode: st.mode }; }, true); }
@@ -2661,7 +2662,8 @@ const Player = (() => {
   $('#opt-memory').addEventListener('change', e => { st.memory = e.target.checked; render(); });
   $('#opt-guide').addEventListener('change', e => { st.guide = e.target.checked; });
   $('#opt-click').addEventListener('change', e => { st.click = e.target.checked; });
-  $('#opt-loop').addEventListener('change', e => { st.loop = e.target.checked; });
+  const setLoop = v => { st.loop = v; $('#opt-loop').checked = v; $('#opt-loop2').checked = v; lsSet('stk.loop', v ? '1' : '0'); };
+  $('#opt-loop').addEventListener('change', e => setLoop(e.target.checked)); $('#opt-loop2').addEventListener('change', e => setLoop(e.target.checked));
   $('#opt-auto').addEventListener('change', e => { st.auto = e.target.checked; lsSet('stk.auto', st.auto ? '1' : '0'); });
   peekB.addEventListener('click', () => { sheet.classList.remove('memory'); setTimeout(() => sheet.classList.toggle('memory', st.memory), 2000); });
   svg.addEventListener('click', e => {
@@ -3372,6 +3374,16 @@ window.addEventListener('keydown', e => {
   if ((a === 'next' || a === 'back') && !busy && View.cur !== 'nigunim') return;
   if (keyAction(a)) e.preventDefault();
 });
+
+/* ---------------- full screen ---------------- */
+(() => {
+  const b = $('#fs-btn'), el = document.documentElement;
+  const can = !!(el.requestFullscreen || el.webkitRequestFullscreen); if (!can) return; b.hidden = false;
+  const on = () => document.fullscreenElement || document.webkitFullscreenElement;
+  const sync = () => { b.textContent = on() ? '✕ Exit full screen' : '⛶ Full screen'; };
+  b.addEventListener('click', () => { try { on() ? (document.exitFullscreen || document.webkitExitFullscreen).call(document) : (el.requestFullscreen || el.webkitRequestFullscreen).call(el); } catch (e) {} });
+  document.addEventListener('fullscreenchange', sync); document.addEventListener('webkitfullscreenchange', sync);
+})();
 
 /* ---------------- naming, sync status, boot ---------------- */
 function setNaming(n) {
