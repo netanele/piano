@@ -393,7 +393,7 @@ g.n.o3{--hf:var(--oct3);--hl:var(--ink)}
 g.n.o4{--hf:var(--oct4);--hl:var(--ink)}
 g.n.o5{--hf:var(--oct5);--hl:var(--ink)}
 g.n.o6,g.n.o7,g.n.o8{--hf:var(--oct6);--hl:var(--ink)}
-g.n.cur{--hf:var(--felt);--hl:#FFF8EE}
+g.n.cur .lh-f{stroke:var(--felt);stroke-width:3}
 .lh-f{fill:var(--hf);stroke:var(--ink);stroke-width:1.3}
 .lh-o{fill:var(--ink)}
 .lh-r{fill:var(--hf)}
@@ -605,7 +605,7 @@ footer .midi{margin-top:12px}
 .lhn .o2{--hf:var(--oct2);--hl:var(--paper)}
 .lhn .o3{--hf:var(--oct3);--hl:var(--ink)}
 .lhn .o4{--hf:var(--oct4);--hl:var(--ink)}
-g.n.lhn.cur g{--hf:var(--felt);--hl:#FFF8EE}
+g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
 .fgr.lhf{font-size:8.5px;fill:var(--brass)}
 .countin.long{font:700 1.3rem var(--f-body);padding:10px 18px}
 @media (max-height:520px) and (orientation:landscape){.kb{height:84px}.dock{padding-top:5px}.dock-in{gap:4px}.dbtn{height:26px}.mini{height:22px}.hero{padding-block:16px 4px}}
@@ -744,7 +744,6 @@ g.n.lhn.cur g{--hf:var(--felt);--hl:#FFF8EE}
         <div class="range-row"><span class="small muted">Practise</span><span class="seg" role="group" aria-label="Part" id="p-parts"></span></div>
         <div class="range-row" id="p-phrase-row"><span class="small muted">Phrase</span><span class="seg" role="group" aria-label="Phrase" id="p-phrases"></span></div>
       </div>
-      <div class="sheet" id="sheet"><button class="peek btn small" id="p-peek" hidden>Peek</button><svg id="sheet-svg" role="img" aria-label="Sheet music"></svg><div class="countin" id="countin" hidden></div></div>
       <div class="msg" id="p-msg" aria-live="polite">Tap any note to hear it.</div>
       <div class="modes" role="group" aria-label="Mode" id="p-modes">
         <button data-mode="listen" aria-pressed="false"><b>Listen</b><span>hear it first</span></button>
@@ -761,6 +760,7 @@ g.n.lhn.cur g{--hf:var(--felt);--hl:#FFF8EE}
         <span class="mono small" id="tempo-val">100%</span>
         <label class="tog"><input type="checkbox" id="opt-auto" checked> Auto tempo</label>
       </div>
+      <div class="sheet" id="sheet"><button class="peek btn small" id="p-peek" hidden>Peek</button><svg id="sheet-svg" role="img" aria-label="Sheet music"></svg><div class="countin" id="countin" hidden></div></div>
       <details class="helpers" id="p-helpers">
         <summary>Helpers, left hand and sound</summary>
         <div class="hgrid">
