@@ -1113,17 +1113,20 @@ const SetFile = (() => {
   return {
     file: F, migrated, mem,
     get: k => (mem.has(k) ? mem.get(k) : null),
-    set(k, v) { v = String(v); if (mem.get(k) === v) return; mem.set(k, v); if (!seeding && !unsaved) { unsaved = true; emit(); } },
+    /* quiet: background bookkeeping (the practice-time counter, the last song you opened) is kept and saved with the next Save,
+       but does not by itself light up Save */
+    set(k, v, quiet) { v = String(v); if (mem.get(k) === v) return; mem.set(k, v); if (!seeding && !quiet && !unsaved) { unsaved = true; emit(); } },
     shapes: F && F.chordShapes ? F.chordShapes : null,
     /* after the page has finished opening, every change counts as unsaved */
     ready() { seeding = false; if (migrated) { unsaved = true; emit(); } },
     clean() { unsaved = false; emit(); },
+    touch() { if (!seeding && !unsaved) { unsaved = true; emit(); } },
     get unsaved() { return unsaved; },
     onChange: f => subs.push(f),
   };
 })();
 const lsGet = k => SetFile.get(k);
-const lsSet = (k, v) => SetFile.set(k, v);
+const lsSet = (k, v, quiet) => SetFile.set(k, v, quiet);
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const dkey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1390,7 +1393,7 @@ const Store = (() => {
   let ref = null, synced = false, writing = false, dirty = false, first = true, pt = null;
   const subs = [], emit = () => subs.forEach(f => f(s, synced));
   const canon = o => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v)) ? Object.keys(v).sort().reduce((a, x) => { a[x] = v[x]; return a; }, {}) : v);
-  const saveLocal = () => lsSet(KEY, JSON.stringify(s));
+  const saveLocal = quiet => lsSet(KEY, JSON.stringify(s), quiet);
   async function push() {
     if (!ref) return; dirty = true; if (writing) return; writing = true;
     while (dirty && ref) {
@@ -1402,7 +1405,7 @@ const Store = (() => {
   }
   let due = 0;
   const schedule = ms => { const at = Date.now() + ms; if (pt && due <= at) return; clearTimeout(pt); due = at; pt = setTimeout(() => { pt = null; push(); }, ms); };
-  const change = (fn, quiet) => { fn(s); saveLocal(); if (!quiet) emit(); schedule(quiet ? 30000 : 2500); };
+  const change = (fn, quiet) => { fn(s); saveLocal(quiet); if (!quiet) emit(); schedule(quiet ? 30000 : 2500); };
   /* merge two copies: numbers take the larger, dates the later, objects merge key by key, other values keep the local one */
   function deep(a, b, key) {
     if (key === 'last' || key === 'tempo') return a && Object.keys(a).length ? a : b;
@@ -4239,7 +4242,7 @@ const Player = (() => {
     el.innerHTML = (st.mode === 'step' || st.mode === 'play') ? `<span class="cdots" aria-label="${cs} clean in a row">${[0, 1, 2].map(i => `<i class="${i < cs ? 'on' : ''}"></i>`).join('')}</span> ${R.b && kind === 'p' ? 'best clean ' + R.b + '%' : R.cl ? R.cl + ' clean so far' : 'clean in a row'}` : '';
   }
   /* ----- tempo ----- */
-  function setPct(v) { st.pct = clamp(Math.round(v / 5) * 5, 25, 125); $('#tempo').value = st.pct; $('#tempo-val').textContent = st.pct + '% · ' + bpm() + ' bpm'; Store.change(x => { x.tempo[tempoKey()] = st.pct; }, true); }
+  function setPct(v) { st.pct = clamp(Math.round(v / 5) * 5, 25, 125); $('#tempo').value = st.pct; $('#tempo-val').textContent = st.pct + '% · ' + bpm() + ' bpm'; Store.change(x => { x.tempo[tempoKey()] = st.pct; }, true); SetFile.touch(); }
   function loadPct() { const v = Store.s.tempo[tempoKey()]; st.pct = v || 100; $('#tempo').value = st.pct; $('#tempo-val').textContent = st.pct + '% · ' + bpm() + ' bpm'; }
 
   /* ----- side panels: library, header, rungs, parts ----- */
@@ -5213,7 +5216,7 @@ const Today = (() => {
     days.forEach((k, i) => { const b = h('div', 'bar' + (mins[i] ? ' has' : '') + (k === today() ? ' is-today' : '')); b.style.height = (mins[i] / max * 100) + '%'; b.title = k + ': ' + mins[i] + ' min'; chart.append(b); const lab = h('span', k === today() ? 't' : null, 'SMTWTFS'[new Date(k + 'T12:00').getDay()]); xs.append(lab); });
     const g = h('div', 'goal'); g.style.bottom = (20 / max * 100) + '%'; g.append(h('span', null, '20 min')); chart.append(g);
   }
-  $('#ifthen').addEventListener('input', e => { const v = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(() => Store.change(x => { x.ifthen = v; }, true), 600); });
+  $('#ifthen').addEventListener('input', e => { const v = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(() => { Store.change(x => { x.ifthen = v; }, true); SetFile.touch(); }, 600); });
   $('#t-start').addEventListener('click', () => Sess.start());
   $('#t-continue').addEventListener('click', () => { const L = Store.s.last; Player.cfg({ song: L.song, part: L.part, phrase: L.phrase, mode: L.mode }); });
   return { render, blocks };
