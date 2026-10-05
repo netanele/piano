@@ -37,8 +37,9 @@
 *,*::before,*::after{box-sizing:border-box}
 /* never fake a bold: a weight a font does not have is drawn smeared and blurry, so use the nearest real weight instead */
 html{font-synthesis:style;font-synthesis-weight:none}
+/* Mac: the browser's normal text rendering. "antialiased" drew text thinner and soft, most of all on non-Retina screens */
 html{scroll-behavior:smooth;scroll-padding-top:72px}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-inline:16px;padding-bottom:calc(var(--dock-h) + 40px)}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:auto;-moz-osx-font-smoothing:auto;padding-inline:16px;padding-bottom:calc(var(--dock-h) + 40px)}
 h1,h2,h3,h4{margin:0;text-wrap:balance}
 p{margin:0}
 a{color:var(--brass);text-underline-offset:3px}
