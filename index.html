@@ -756,9 +756,9 @@ g.n.lhn.cur g{--hf:var(--felt);--hl:#FFF8EE}
       <div class="row go-row"><button class="btn primary big" id="p-go">▶ Start</button><label class="tog"><input type="checkbox" id="opt-loop2"> Keep going until I press Stop</label><span class="clean" id="p-clean"></span></div>
       <div class="tempo-row">
         <button class="btn small" id="t-minus" aria-label="Slower">−</button>
-        <input type="range" id="tempo" min="25" max="125" step="5" value="60" aria-label="Tempo, percent of full speed">
+        <input type="range" id="tempo" min="25" max="125" step="5" value="100" aria-label="Tempo, percent of full speed">
         <button class="btn small" id="t-plus" aria-label="Faster">+</button>
-        <span class="mono small" id="tempo-val">60% · 43</span>
+        <span class="mono small" id="tempo-val">100%</span>
         <label class="tog"><input type="checkbox" id="opt-auto" checked> Auto tempo</label>
       </div>
       <details class="helpers" id="p-helpers">
@@ -3042,7 +3042,7 @@ const heb = t => t.replace(/([\u0590-\u05FF][\u0590-\u05FF\s:'"\u05F3\u05F4.-]*[
 const Player = (() => {
   const svg = $('#sheet-svg'), sheet = $('#sheet'), msg = $('#p-msg'), countEl = $('#countin'), goB = $('#p-go'), fab = $('#fab'), rateEl = $('#rate'), peekB = $('#p-peek');
   const st = {
-    song: SONGS[0], part: 0, phrase: 0, mode: 'step', pct: 60,
+    song: SONGS[0], part: -1, phrase: -1, mode: 'step', pct: 100,
     hands: lsGet('stk.hands') || 'r', lh: lsGet('stk.lh2') || 'app', glow: lsGet('stk.glow') || 'on', fingers: lsGet('stk.fingers') || 'all',
     counts: lsGet('stk.counts') === '1', size: lsGet('stk.size') || 'l', memory: false, guide: true, click: true, loop: lsGet('stk.loop') !== '0', auto: lsGet('stk.auto') !== '0', echo: 'sing',
   };
@@ -3318,7 +3318,7 @@ const Player = (() => {
   }
   /* ----- tempo ----- */
   function setPct(v) { st.pct = clamp(Math.round(v / 5) * 5, 25, 125); $('#tempo').value = st.pct; $('#tempo-val').textContent = st.pct + '% · ' + bpm() + ' bpm'; Store.change(x => { x.tempo[tempoKey()] = st.pct; }, true); }
-  function loadPct() { const v = Store.s.tempo[tempoKey()]; st.pct = v || 60; $('#tempo').value = st.pct; $('#tempo-val').textContent = st.pct + '% · ' + bpm() + ' bpm'; }
+  function loadPct() { const v = Store.s.tempo[tempoKey()]; st.pct = v || 100; $('#tempo').value = st.pct; $('#tempo-val').textContent = st.pct + '% · ' + bpm() + ' bpm'; }
 
   /* ----- side panels: library, header, rungs, parts ----- */
   function renderHead() {
@@ -3332,8 +3332,9 @@ const Player = (() => {
   }
   function renderParts() {
     const S = st.song, box = $('#p-parts'); box.textContent = '';
-    const mk = (lab, p) => { const b = h('button', null, lab); b.setAttribute('aria-pressed', String(st.part === p)); b.addEventListener('click', () => setRange(p, p < 0 ? -1 : (S.parts[p].phrases.length > 1 ? 0 : -1))); box.append(b); };
-    if (S.parts.length > 1 || S.whole.length !== S.parts[0].bars.length) mk('Whole', -1);
+    const hasWhole = S.parts.length > 1 || S.whole.length !== S.parts[0].bars.length;
+    const mk = (lab, p) => { const b = h('button', null, lab); b.setAttribute('aria-pressed', String(st.part === p || (!hasWhole && p === 0 && st.part < 0))); b.addEventListener('click', () => setRange(p, p < 0 ? -1 : (S.parts[p].phrases.length > 1 ? 0 : -1))); box.append(b); };
+    if (hasWhole) mk('Whole', -1);
     S.parts.forEach(p => mk(p.label, p.i));
     const pb = $('#p-phrases'), row = $('#p-phrase-row'); pb.textContent = '';
     const P = st.part >= 0 ? S.parts[st.part] : null;
@@ -3412,8 +3413,8 @@ const Player = (() => {
     const S = songById(id); if (!S) return;
     if (run) stop(true); hideRate(); ctxExtra = null;
     st.song = S;
-    if (!keepRange) { const L = Store.s.last || {}; if (L.song === id && L.part != null) { st.part = L.part; st.phrase = L.phrase; } else { st.part = 0; st.phrase = S.parts[0].phrases.length > 1 ? 0 : -1; } }
-    if (st.part >= S.parts.length) { st.part = 0; st.phrase = -1; }
+    if (!keepRange) { const L = Store.s.last || {}; if (L.song === id && L.part != null) { st.part = L.part; st.phrase = L.phrase; } else { st.part = -1; st.phrase = -1; } }
+    if (st.part >= S.parts.length) { st.part = -1; st.phrase = -1; }
     loadPct(); renderSide(); render(); showClean();
     say('Tap any note to hear it. New here? Press “Next step” above.');
     saveLast();
