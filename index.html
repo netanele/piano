@@ -477,6 +477,18 @@ body{background-color:var(--bg);background-image:url("data:image/svg+xml,%3Csvg%
 @media (min-width:980px){.lib-h{writing-mode:horizontal-tb;transform:none;margin-top:6px}}
 .card{flex:0 0 184px;display:grid;gap:3px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);text-align:left;cursor:pointer;color:var(--ink)}
 .card[aria-pressed="true"]{border-color:var(--felt);box-shadow:0 0 0 1px var(--felt)}
+.card-add{border-style:dashed;color:var(--ink-2);align-content:center}
+.my-dlg{max-width:540px;width:calc(100% - 32px);border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);padding:20px 20px 16px}
+.my-dlg::backdrop{background:rgb(0 0 0 / .45)}
+.my-dlg h3{margin:0 40px 6px 0}
+.my-dlg p{margin:6px 0}
+.my-x{position:absolute;top:12px;right:12px;margin:0}
+.my-pick{margin:8px 0 4px}
+.my-prev{display:grid;gap:6px;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.my-prev input{display:block;width:100%;margin-top:4px;font:inherit;font-size:1rem;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.my-help{margin-top:12px;font-size:.9rem}
+.my-help summary{cursor:pointer;font-weight:600}
+.my-help ol{padding-left:20px;margin:6px 0}
 .card-t{display:flex;justify-content:space-between;gap:6px;align-items:baseline}
 .card-t b{font-size:.9rem;line-height:1.25}
 .card-he{font:600 .95rem var(--f-body);color:var(--ink-2);direction:rtl;unicode-bidi:isolate;text-align:left}
@@ -695,6 +707,24 @@ g.n.lhn.cur g{--hf:var(--felt);--hl:#FFF8EE}
   </details>
 </section>
 
+<dialog class="my-dlg" id="my-dlg" aria-labelledby="my-dlg-h">
+  <form method="dialog" class="my-x"><button class="btn small" aria-label="Close">✕</button></form>
+  <h3 id="my-dlg-h">Add a song from your sheet</h3>
+  <p class="small">Choose a <b>MusicXML</b> (.musicxml, .xml, .mxl) or <b>MIDI</b> (.mid) file. The page reads the melody and builds it like a nigun: letters inside the notes, fingering, chords and the learn-it-step-by-step ladder.</p>
+  <p class="small muted">The song is kept in your own progress store (this browser, and your account when synced). It is never added to this page's code.</p>
+  <label class="btn primary my-pick"><input type="file" id="my-file" accept=".musicxml,.xml,.mxl,.mid,.midi,.pdf,.png,.jpg,.jpeg,.heic" hidden>Choose a file</label>
+  <div id="my-out" aria-live="polite"></div>
+  <details class="my-help" id="my-help"><summary>Only have a PDF or a photo of the sheet?</summary>
+    <p>Turn it into MusicXML first, free, on your Mac:</p>
+    <ol>
+      <li>Install <a href="https://audiveris.github.io/audiveris/" target="_blank" rel="noopener">Audiveris</a> (free sheet-music reader).</li>
+      <li>Open your PDF or image in it and run <b>Transcribe</b>.</li>
+      <li>Export the result as <b>MusicXML (.mxl)</b>.</li>
+      <li>Come back here and choose that .mxl file.</li>
+    </ol>
+    <p class="small muted">Clean, straight, printed sheets work best. Many sheets on musescore.com also offer a direct “MusicXML” download.</p>
+  </details>
+</dialog>
 <!-- ============ NIGUNIM ============ -->
 <section class="view wide" id="v-nigunim" data-view="nigunim" hidden>
   <div class="lib-grid">
@@ -1996,7 +2026,391 @@ function readingSong(dateKey, N) {
   }
   return buildSong({ id: 'read-' + dateKey, kind: 'read', t: 'Reading tune for ' + dateKey, short: 'Reading tune', he: '', by: '', time: 4, tempo: 60, pick: '', sec: [{ id: 'A', n: bars.join(' | '), c: '' }], form: ['A'] });
 }
+/* ---------------- my songs ----------------
+   Songs added from your own sheet files (MusicXML .musicxml/.xml, compressed .mxl, or MIDI .mid).
+   The file is read here in the browser and turned into the same format as the nigunim: melody line, letters,
+   fingering, chords and the learning ladder. The result is kept in your progress store (this browser, and your
+   account when synced), never in this page's source. */
+const MySongs = (() => {
+  const list = () => Object.values((Store.s.my) || {}).filter(r => r && !r.del && r.id && r.sec).sort((a, b) => (a.added || '').localeCompare(b.added || '') || a.id.localeCompare(b.id));
+  const vc = new Map();
+  const valid = r => { const k = r.id + '|' + r.t + '|' + r.added; if (!vc.has(k)) { let ok = false; try { const S = buildSong(r); ok = S.disp.length > 0 && S.parts.length > 0; } catch (e) {} vc.set(k, ok); } return vc.get(k); };
+
+  /* ---- spelling ---- */
+  const MAJ_TONIC = ['Cb', 'Gb', 'Db', 'Ab', 'Eb', 'Bb', 'F', 'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#'];
+  const SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map(s => ({ L: s[0], a: s[1] ? 1 : 0 }));
+  const FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'].map(s => ({ L: s[0], a: s[1] ? -1 : 0 }));
+  const accOf = s => s[1] === '#' ? 1 : s[1] === 'b' ? -1 : 0;
+  const nm = s => s.L + (s.a > 0 ? '#' : s.a < 0 ? 'b' : '');
+  const pstr = (s, m) => nm(s) + (Math.floor((m - NAT[s.L] - s.a) / 12) - 1);
+  function speller(fifths, minor) {
+    const t = MAJ_TONIC[clamp(fifths, -7, 7) + 7], li = LETTERS.indexOf(t[0]), tPc = pc(NAT[t[0]] + accOf(t));
+    const dia = [0, 2, 4, 5, 7, 9, 11].map((s, i) => { const L = LETTERS[(li + i) % 7]; let a = pc(tPc + s) - NAT[L]; if (a > 6) a -= 12; if (a < -6) a += 12; return { L, a, pc: pc(tPc + s) }; });
+    const minT = pc(tPc + 9);
+    return p => {
+      p = pc(p);
+      const d = dia.find(x => x.pc === p); if (d && Math.abs(d.a) <= 1) return { L: d.L, a: d.a };
+      const white = LETTERS.find(L => NAT[L] === p); if (white) return { L: white, a: 0 };
+      const below = dia.find(x => x.pc === pc(p - 1)), above = dia.find(x => x.pc === pc(p + 1));
+      const raise = minor && (p === pc(minT + 11) || p === pc(minT + 9));
+      let c = (raise || fifths >= 0) ? (below && { L: below.L, a: below.a + 1 }) : (above && { L: above.L, a: above.a - 1 });
+      if (!c || Math.abs(c.a) > 1) c = (fifths >= 0 ? SHARP : FLAT)[p];
+      return c;
+    };
+  }
+
+  /* ---- key ---- */
+  const KS_MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+  const KS_MIN = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  function detectKey(hist, firstPc, lastPc) {
+    let best = null; const mx = hist.reduce((a, x) => a + x, 0) / 12;
+    for (let t = 0; t < 12; t++) for (const minor of [false, true]) {
+      const P = minor ? KS_MIN : KS_MAJ, y = hist.map((_, i) => P[pc(i - t)]), my = y.reduce((a, x) => a + x, 0) / 12;
+      let num = 0, dx = 0, dy = 0; hist.forEach((x, i) => { num += (x - mx) * (y[i] - my); dx += (x - mx) ** 2; dy += (y[i] - my) ** 2; });
+      const r = num / (Math.sqrt(dx * dy) || 1) + (t === lastPc ? 0.15 : 0) + (t === firstPc ? 0.05 : 0) + (minor ? 0 : 0.01); if (!best || r > best.r) best = { r, t, minor };
+    }
+    return best;
+  }
+  const fifthsFor = (t, minor) => { const maj = minor ? pc(t + 3) : t; for (const f of [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6]) if (pc(f * 7) === maj) return f; return 0; };
+  function settleKey(fifths, mode, notes) {
+    const hist = Array(12).fill(0); notes.forEach(n => { hist[pc(n.m)] += n.d; });
+    if (fifths == null || isNaN(fifths)) { const k = detectKey(hist, notes.length ? pc(notes[0].m) : -1, notes.length ? pc(notes[notes.length - 1].m) : -1); return { fifths: fifthsFor(k.t, k.minor), minor: k.minor, tonic: k.t }; }
+    const majT = pc(fifths * 7), minT = pc(majT + 9);
+    let minor = mode === 'minor' ? true : mode === 'major' ? false : null;
+    if (minor == null) { const last = notes.length ? pc(notes[notes.length - 1].m) : majT; minor = last === minT ? true : last === majT ? false : hist[minT] + hist[pc(minT + 7)] > hist[majT] + hist[pc(majT + 7)]; }
+    return { fifths, minor, tonic: minor ? minT : majT };
+  }
+
+  /* ---- rhythm: durations to the page's tokens ---- */
+  const PIECES = [[4, 'w'], [3, 'h.'], [2, 'h'], [1.5, 'q.'], [1, 'q'], [0.75, '8.'], [0.5, '8'], [0.25, '16']];
+  const q4 = x => Math.round(x * 4) / 4;
+  const pieces = d => { const out = []; let r = q4(d); while (r > 0.001) { const p = PIECES.find(([v]) => v <= r + 1e-6); out.push(p); r = q4(r - p[0]); } return out; };
+  const durName = v => (PIECES.find(([x]) => Math.abs(x - v) < 1e-6) || [])[1];
+  const WRIT = { whole: 4, half: 2, quarter: 1, eighth: 0.5, '16th': 0.25 };
+  /* one bar: events { on, d (beats), p (pitch text or null = rest), tie, tup, w } to tokens; gaps become rests */
+  function barTokens(evs, len) {
+    const out = []; let t = 0, rounded = false;
+    const rest = d => pieces(d).forEach(([, n]) => out.push('R/' + n));
+    const note = (p, d, tie) => { const ps = pieces(d); ps.forEach(([, n], i) => out.push((p || 'R') + '/' + n + (p && (i < ps.length - 1 || tie) ? '~' : ''))); };
+    evs = evs.slice().sort((a, b) => a.on - b.on);
+    for (let i = 0; i < evs.length; i++) {
+      const e = evs[i];
+      if (e.tup) {
+        const g = [e]; while (i + 1 < evs.length && evs[i + 1].tup === e.tup) g.push(evs[++i]);
+        const on = Math.max(t, q4(g[0].on));
+        const ws = g.map(x => durName(x.w)), real = g.reduce((a, x) => a + (x.w || 0), 0) * 2 / 3;
+        if (on + real > len + 1e-6) continue;
+        if (on > t + 1e-6) rest(on - t);
+        t = on;
+        if (ws.every(Boolean) && Math.abs(q4(real) - real) < 1e-6) { out.push('T3['); g.forEach((x, k) => out.push((x.p || 'R') + '/' + ws[k] + (x.p && x.tie ? '~' : ''))); out.push(']'); t += real; continue; }
+        rounded = true;
+        g.forEach(x => { const d = Math.min(Math.max(0.25, q4(x.d)), len - t); if (d > 0) { note(x.p, d, x.tie); t += d; } });
+        continue;
+      }
+      let on = q4(e.on), d = q4(e.d);
+      if (Math.abs(on - e.on) > 0.02 || Math.abs(d - e.d) > 0.02) rounded = true;
+      if (on >= len - 1e-6) break;
+      if (on < t) { d = q4(on + d - t); on = t; if (d <= 0) continue; }
+      if (on > t + 1e-6) { rest(on - t); t = on; }
+      const nx = evs.slice(i + 1).find(x => q4(x.on) > t + 1e-6);
+      const lim = Math.min(len, nx ? q4(nx.on) : len);
+      if (d < 0.25) d = 0.25;
+      d = Math.min(d, lim - t);
+      if (d <= 0) continue;
+      note(e.p, d, e.tie && e.p && t + d >= q4(e.on + e.d) - 1e-6);
+      t += d;
+    }
+    if (t < len - 1e-6) rest(len - t);
+    return { toks: out.join(' '), rounded };
+  }
+
+  /* ---- MusicXML ---- */
+  const kid = (el, name) => { if (!el) return null; for (const c of el.children) if (c.localName === name) return c; return null; };
+  const kids = (el, name) => el ? [...el.children].filter(c => c.localName === name) : [];
+  const tx = (el, path) => { let e = el; for (const p of path.split(' ')) e = kid(e, p); return e ? e.textContent.trim() : ''; };
+  const desc = (el, name) => el.getElementsByTagName(name);
+  function harmName(el) {
+    const r = kid(el, 'root'); if (!r) return null;
+    const step = tx(r, 'root-step').toUpperCase(), alt = Math.round(+tx(r, 'root-alter') || 0), kind = tx(el, 'kind');
+    if (kind === 'none' || NAT[step] == null || Math.abs(alt) > 1) return null;
+    const q = /^minor-seventh$/.test(kind) ? 'm7' : /^minor/.test(kind) ? 'm' : /^half-diminished/.test(kind) ? 'dim7' : /^diminished/.test(kind) ? 'dim' : /^(dominant|seventh)/.test(kind) ? '7' : '';
+    const name = step + (alt > 0 ? '#' : alt < 0 ? 'b' : '') + q;
+    return chordInfo(name) ? name : null;
+  }
+  function pickVoice(part) {
+    const c = {};
+    [...desc(part, 'note')].forEach(n => { if (kid(n, 'rest') || kid(n, 'grace') || !kid(n, 'pitch')) return; const k = (tx(n, 'staff') || '1') + '/' + (tx(n, 'voice') || '1'); c[k] = (c[k] || 0) + 1; });
+    const ks = Object.keys(c).filter(k => k.startsWith('1/')); if (!ks.length) return null;
+    const k = c['1/1'] ? '1/1' : ks.sort((a, b) => c[b] - c[a])[0]; const [staff, voice] = k.split('/');
+    return { staff, voice };
+  }
+  function readPart(part, want) {
+    let div = 1, meter = null, fifths = null, mode = '', tempo = null;
+    const ms = kids(part, 'measure').map(M => {
+      const m = { evs: [], harms: [], len: 0, meter: null, fwd: false, bwd: false, endStart: 0, endStop: false, mark: '', implicit: M.getAttribute('implicit') === 'yes' };
+      let pos = 0, lastOn = 0, last = null;
+      for (const el of M.children) {
+        const n = el.localName;
+        if (n === 'attributes') {
+          const d = tx(el, 'divisions'); if (d) div = +d || 1;
+          const tm = kid(el, 'time'); if (tm && tx(tm, 'beats')) { const b = tx(tm, 'beats').split('+').reduce((a, x) => a + (+x || 0), 0), bt = +tx(tm, 'beat-type') || 4; meter = b * 4 / bt; }
+          const k = kid(el, 'key'); if (k && fifths == null && tx(k, 'fifths') !== '') { fifths = +tx(k, 'fifths'); mode = tx(k, 'mode'); }
+        } else if (n === 'direction') {
+          const r = desc(el, 'rehearsal')[0]; if (r && !m.mark) m.mark = r.textContent.trim();
+          const s = [...desc(el, 'sound')].find(x => x.getAttribute('tempo')); if (s && tempo == null) tempo = +s.getAttribute('tempo');
+          const mt = desc(el, 'metronome')[0];
+          if (mt && tempo == null) { const v = parseFloat(tx(mt, 'per-minute')); if (v) tempo = v * ({ half: 2, eighth: 0.5, quarter: 1 }[tx(mt, 'beat-unit')] || 1) * (kid(mt, 'beat-unit-dot') ? 1.5 : 1); }
+        } else if (n === 'sound') { if (el.getAttribute('tempo') && tempo == null) tempo = +el.getAttribute('tempo'); }
+        else if (n === 'harmony') { const name = harmName(el); if (name) m.harms.push({ on: (pos + (+tx(el, 'offset') || 0)) / div, name }); }
+        else if (n === 'backup') pos -= +tx(el, 'duration') || 0;
+        else if (n === 'forward') { pos += +tx(el, 'duration') || 0; m.len = Math.max(m.len, pos); }
+        else if (n === 'note') {
+          if (kid(el, 'grace')) continue;
+          const dur = +tx(el, 'duration') || 0, chord = !!kid(el, 'chord'), on = chord ? lastOn : pos;
+          if (want && (tx(el, 'staff') || '1') === want.staff && (tx(el, 'voice') || '1') === want.voice) {
+            const pe = kid(el, 'pitch');
+            const e = { on: on / div, d: dur / div, rest: !!kid(el, 'rest') || !pe };
+            if (pe) { e.step = tx(pe, 'step').toUpperCase(); e.alter = Math.round(+tx(pe, 'alter') || 0); e.oct = +tx(pe, 'octave'); e.m = (e.oct + 1) * 12 + NAT[e.step] + e.alter; }
+            e.tie = kids(el, 'tie').some(t => t.getAttribute('type') === 'start') || [...desc(el, 'tied')].some(t => t.getAttribute('type') === 'start');
+            const tmod = kid(el, 'time-modification'); if (tmod) { e.an = +tx(tmod, 'actual-notes'); e.nn = +tx(tmod, 'normal-notes'); }
+            const ty = tx(el, 'type'), dots = kids(el, 'dot').length; if (WRIT[ty] != null) e.w = WRIT[ty] * (dots === 1 ? 1.5 : dots === 2 ? 1.75 : 1);
+            const tp = [...desc(el, 'tuplet')]; e.tStart = tp.some(t => t.getAttribute('type') === 'start'); e.tStop = tp.some(t => t.getAttribute('type') === 'stop');
+            if (chord) { if (last && !e.rest && (last.rest || e.m > last.m) && Math.abs(last.on - e.on) < 1e-6) Object.assign(last, { step: e.step, alter: e.alter, oct: e.oct, m: e.m, rest: false }); }
+            else { m.evs.push(e); last = e; }
+          }
+          if (!chord) { lastOn = pos; pos += dur; m.len = Math.max(m.len, pos); }
+        } else if (n === 'barline') {
+          const rp = kid(el, 'repeat'); if (rp) { if (rp.getAttribute('direction') === 'forward') m.fwd = true; else m.bwd = true; }
+          const en = kid(el, 'ending'); if (en) { if (en.getAttribute('type') === 'start') m.endStart = parseInt(en.getAttribute('number'), 10) || 1; else m.endStop = true; }
+        }
+      }
+      m.len /= div; m.meter = meter;
+      return m;
+    });
+    return { ms, fifths, mode, tempo };
+  }
+  function fromMusicXML(text) {
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    if (desc(doc, 'parsererror').length) throw new Error('This file is not valid MusicXML.');
+    const root = doc.documentElement;
+    if (root.localName === 'score-timewise') throw new Error('This MusicXML uses the rare “timewise” layout. Export it again as standard MusicXML.');
+    if (root.localName !== 'score-partwise') throw new Error('This file is not a MusicXML score.');
+    const parts = kids(root, 'part');
+    let mel = null, want = null; for (const p of parts) { want = pickVoice(p); if (want) { mel = p; break; } }
+    if (!mel) throw new Error('No notes were found in this file.');
+    const R = readPart(mel, want);
+    if (!R.ms.some(m => m.harms.length)) for (const p of parts) { if (p === mel) continue; const o = readPart(p, null); if (o.ms.some(m => m.harms.length)) { o.ms.forEach((m, i) => { if (R.ms[i]) R.ms[i].harms = m.harms; }); break; } }
+    if (R.tempo == null) for (const p of parts) { if (p === mel) continue; const o = readPart(p, null); if (o.tempo) { R.tempo = o.tempo; break; } }
+    const credit = [...desc(root, 'credit-words')].map(x => x.textContent.trim()).filter(Boolean)[0];
+    const title = tx(root, 'work work-title') || tx(root, 'movement-title') || credit || '';
+    const bars = R.ms.map(m => {
+      let tup = null, gid = 0;
+      const evs = m.evs.map(e => {
+        const trip = (e.an === 3 && e.nn === 2) || (e.an === 6 && e.nn === 4);
+        let g = null;
+        if (trip) { if (!tup || e.tStart) tup = 'g' + (++gid); g = tup; if (e.tStop) tup = null; } else tup = null;
+        return { on: e.on, d: e.d, m: e.rest ? null : e.m, sp: e.rest ? null : { L: e.step, a: e.alter }, tie: e.tie, w: e.w != null ? e.w : e.d * 1.5, tup: g };
+      });
+      return { meter: m.meter || 4, len: m.len, evs, harms: m.harms, fwd: m.fwd, bwd: m.bwd, endStart: m.endStart, endStop: m.endStop, mark: m.mark };
+    });
+    let pick = null;
+    if (bars.length > 1 && bars[0].len > 0 && bars[0].len < bars[0].meter - 1e-6) { pick = bars.shift(); pick.len = q4(pick.len); }
+    return { title, bars, pick, fifths: R.fifths, mode: R.mode, tempo: R.tempo, harmonies: bars.some(b => b.harms.length) };
+  }
+
+  /* ---- MIDI ---- */
+  function parseMidi(buf) {
+    const b = new Uint8Array(buf); let p = 0;
+    const u32 = () => ((b[p++] << 24) | (b[p++] << 16) | (b[p++] << 8) | b[p++]) >>> 0, u16 = () => (b[p++] << 8) | b[p++];
+    const str4 = () => String.fromCharCode(b[p++], b[p++], b[p++], b[p++]);
+    const vlq = () => { let v = 0, c; do { c = b[p++]; v = (v * 128) + (c & 0x7f); } while ((c & 0x80) && p < b.length); return v; };
+    if (str4() !== 'MThd') throw new Error('This is not a MIDI file.');
+    const hl = u32(), hs = p; u16(); const ntr = u16(), division = u16(); p = hs + hl;
+    if (division & 0x8000) throw new Error('This MIDI file uses SMPTE timing, which is not supported.');
+    const notes = [], ts = [], keys = [], tempos = []; let name = '';
+    for (let t = 0; t < ntr && p + 8 <= b.length; t++) {
+      const id = str4(), len = u32(), end = Math.min(b.length, p + len);
+      if (id !== 'MTrk') { p = end; continue; }
+      let tick = 0, run = 0; const open = {};
+      while (p < end) {
+        tick += vlq(); let st = b[p];
+        if (st & 0x80) p++; else st = run;
+        if (st === 0xFF) {
+          const ty = b[p++], l = vlq(), d = b.subarray(p, p + l); p += l;
+          if (ty === 0x51 && l >= 3) tempos.push({ tick, bpm: 60000000 / ((d[0] << 16) | (d[1] << 8) | d[2]) });
+          else if (ty === 0x58 && l >= 2) ts.push({ tick, q: d[0] * 4 / Math.pow(2, d[1]) });
+          else if (ty === 0x59 && l >= 2) keys.push({ tick, sf: d[0] > 127 ? d[0] - 256 : d[0], mi: d[1] });
+          else if (ty === 0x03 && t === 0 && !name) name = new TextDecoder('latin1').decode(d).trim();
+          continue;
+        }
+        if (st === 0xF0 || st === 0xF7) { const l = vlq(); p += l; continue; }
+        run = st; const ty = st & 0xF0, ch = st & 0x0F;
+        const d1 = b[p++], d2 = (ty === 0xC0 || ty === 0xD0) ? 0 : b[p++], k = ch + ':' + d1;
+        if (ty === 0x90 && d2 > 0) (open[k] = open[k] || []).push(tick);
+        else if (ty === 0x80 || (ty === 0x90 && d2 === 0)) { const s = open[k] && open[k].shift(); if (s != null && tick > s) notes.push({ tr: t, ch, m: d1, on: s, off: tick }); }
+      }
+      p = end;
+    }
+    return { ppq: division, notes, ts: ts.sort((a, b) => a.tick - b.tick), keys, tempos, name };
+  }
+  function fromMidi(buf) {
+    const M = parseMidi(buf), Q = M.ppq, g = Q / 4, qt = x => Math.round(x / g) * g;
+    const cand = {}; M.notes.forEach(n => { if (n.ch === 9) return; const k = n.tr + ':' + n.ch; (cand[k] = cand[k] || []).push(n); });
+    const lists = Object.values(cand); if (!lists.length) throw new Error('No notes were found in this MIDI file.');
+    const maxN = Math.max(...lists.map(l => l.length)), avg = l => l.reduce((a, n) => a + n.m, 0) / l.length;
+    const mel = lists.filter(l => l.length >= Math.max(8, maxN * 0.25)).sort((a, b) => avg(b) - avg(a))[0] || lists[0];
+    const byOn = new Map(); mel.forEach(n => { const on = qt(n.on), o = byOn.get(on); if (!o || n.m > o.m) byOn.set(on, { on, off: n.off, m: n.m }); });
+    const ev = [...byOn.values()].sort((a, b) => a.on - b.on);
+    ev.forEach((e, i) => { const nx = ev[i + 1]; let off = Math.max(e.on + g, qt(e.off)); if (nx && off > nx.on) off = nx.on; e.off = off; });
+    const meterAt = tick => { let q = 4; M.ts.forEach(x => { if (x.tick <= tick) q = x.q; }); return q; };
+    const lines = []; { let s = 0; const endT = ev[ev.length - 1].off; while (s < endT) { const q = meterAt(s); lines.push({ s, e: s + q * Q, q }); s += q * Q; } }
+    let first = lines.findIndex(L => ev[0].on < L.e);
+    let pick = null; const L0 = lines[first], off0 = (ev[0].on - L0.s) / Q;
+    const cut = (L, len) => ({ meter: L.q, len, evs: ev.filter(e => e.on < L.e && e.off > L.s).map(e => { const s = Math.max(L.s, e.on), f = Math.min(L.e, e.off); return { on: (s - L.s) / Q, d: (f - s) / Q, m: e.m, tie: e.off > L.e }; }), harms: [] });
+    if (off0 > 0 && L0.q - off0 <= L0.q / 2 && lines.length > first + 1) {
+      const b = cut(L0, L0.q); pick = { meter: L0.q, len: q4(L0.q - off0), evs: b.evs.map(e => Object.assign(e, { on: e.on - off0 })), harms: [] }; first++;
+    }
+    const bars = lines.slice(first).map(L => cut(L, L.q));
+    const k = M.keys[0];
+    return { title: M.name, bars, pick, fifths: k ? k.sf : null, mode: k ? (k.mi ? 'minor' : 'major') : '', tempo: M.tempos.length ? M.tempos[0].bpm : null, harmonies: false };
+  }
+
+  /* ---- chords suggested from the melody when the file has none ---- */
+  function autoChords(bars, K, spell) {
+    const T = K.tonic;
+    const SET = K.minor ? [[0, 'm', 0.3], [5, 'm', 0.15], [7, '', 0.15], [8, '', 0.05], [3, '', 0.05], [10, '', 0.03]] : [[0, '', 0.3], [5, '', 0.15], [7, '', 0.15], [9, 'm', 0.05], [2, 'm', 0.03], [4, 'm', 0]];
+    const tonicName = nm(spell(T)) + (K.minor ? 'm' : '');
+    const best = (evs, a, b) => SET.map(([iv, q, pr]) => {
+      const r = pc(T + iv), ts = [r, pc(r + (q === 'm' ? 3 : 4)), pc(r + 7)]; let s = pr * (b - a);
+      evs.forEach(e => { if (e.m == null) return; const s0 = Math.max(a, e.on), s1 = Math.min(b, e.on + e.d); if (s1 <= s0) return; const w = (s1 - s0) * (Math.abs(e.on - a) < 1e-6 ? 1.5 : 1); s += ts.includes(pc(e.m)) ? w : -0.5 * w; });
+      return { s, name: nm(spell(r)) + q };
+    }).sort((x, y) => y.s - x.s)[0];
+    let prev = tonicName;
+    return bars.map((b, i) => {
+      const L = b.meter, has = b.evs.some(e => e.m != null);
+      if (!has) return [prev];
+      if (i === bars.length - 1) return [(prev = tonicName)];
+      const whole = best(b.evs, 0, L); let out = [whole.name];
+      if (L >= 4 && L % 2 === 0) { const h1 = best(b.evs, 0, L / 2), h2 = best(b.evs, L / 2, L); if (h1.name !== h2.name && h1.s + h2.s > whole.s + 0.25 * L) out = [h1.name, h2.name]; }
+      prev = out[out.length - 1]; return out;
+    });
+  }
+
+  /* ---- any model to a song in the page's format ---- */
+  function toRaw(Md, fname) {
+    const all = (Md.pick ? [Md.pick] : []).concat(Md.bars);
+    const notes = all.flatMap(b => b.evs.filter(e => e.m != null));
+    if (notes.length < 4 || !Md.bars.length) throw new Error('Too few notes were found to make a song.');
+    const bad = all.find(b => !Number.isInteger(b.meter) || b.meter < 1 || b.meter > 12);
+    if (bad) throw new Error('This time signature (' + bad.meter + ' quarter beats in a bar) is not supported yet.');
+    const K = settleKey(Md.fifths, Md.mode, notes), spell = speller(K.fifths, K.minor);
+    const ms = notes.map(n => n.m).sort((a, b) => a - b), med = ms[ms.length >> 1]; let shift = 0;
+    while (med + shift < 60) shift += 12; while (med + shift > 79) shift -= 12;
+    const pOf = e => e.m == null ? null : pstr(e.sp && NAT[e.sp.L] != null && Math.abs(e.sp.a) <= 1 ? e.sp : spell(e.m), e.m + shift);
+    let rounded = false;
+    const conv = (b, len) => { const r = barTokens(b.evs.map(e => ({ on: e.on, d: e.d, p: pOf(e), tie: e.tie, tup: e.tup || null, w: e.w })), len); if (r.rounded) rounded = true; return r.toks; };
+    const chords = Md.harmonies ? (() => { let carry = ''; return Md.bars.map(b => { const hs = b.harms.slice().sort((x, y) => x.on - y.on); let names = []; if (hs.length && hs[0].on > 0.01 && carry) names.push(carry); hs.forEach(x => { if (names[names.length - 1] !== x.name) names.push(x.name); }); if (!names.length && carry) names = [carry]; if (names.length) carry = names[names.length - 1]; return names.slice(0, 4); }); })() : autoChords(Md.bars, K, spell);
+    let meter = Md.bars[0].meter;
+    const B = Md.bars.map((b, i) => { const ts = b.meter !== meter ? '[' + b.meter + '/4] ' : ''; meter = b.meter; return Object.assign({}, b, { toks: ts + conv(b, b.meter), ch: chords[i].join(' ') }); });
+    /* sections: split at repeat signs, endings and rehearsal marks */
+    const segs = []; let cur = null;
+    B.forEach(b => {
+      if (!cur || cur.closed || b.fwd || b.endStart || (b.mark && cur.bars.length)) { cur = { bars: [], end: b.endStart || 0, fwd: !!b.fwd, mark: b.mark || '' }; segs.push(cur); }
+      cur.bars.push(b);
+      if (b.bwd) { cur.bwd = true; cur.closed = true; }
+      if (b.endStop && cur.end) cur.closed = true;
+    });
+    /* long plain stretches become 8-bar sections so each part is a sensible size */
+    const segs2 = [];
+    segs.forEach(s => {
+      if (s.end || s.bars.length <= 16) { segs2.push(s); return; }
+      for (let i = 0; i < s.bars.length; i += 8) { const last = i + 8 >= s.bars.length; segs2.push({ bars: s.bars.slice(i, i + 8), end: 0, fwd: i === 0 && s.fwd, mark: i === 0 ? s.mark : '', bwd: last && s.bwd }); }
+    });
+    for (let i = segs2.length - 1; i > 0; i--) if (segs2[i].bars.length < 2 && !segs2[i].end && !segs2[i].fwd && !segs2[i].bwd && !segs2[i].mark && !segs2[i - 1].end && !segs2[i - 1].bwd) { segs2[i - 1].bars.push(...segs2[i].bars); segs2.splice(i, 1); }
+    let letter = 0, lastBody = 'A'; const used = new Set();
+    const uniq = id => { let x = id, k = 2; while (used.has(x)) x = id + k++; used.add(x); return x; };
+    segs2.forEach(s => {
+      if (s.end) { s.id = uniq(lastBody + '-end' + s.end); s.lab = lastBody; }
+      else { const mk = s.mark && s.mark.length <= 3 && /^[\w]+$/.test(s.mark) ? s.mark : null; s.lab = mk || (letter < 26 ? String.fromCharCode(65 + letter) : 'S' + (letter + 1)); letter++; s.id = uniq(s.lab); lastBody = s.id; }
+    });
+    const form = []; let rs = 0;
+    segs2.forEach((s, i) => {
+      if (s.fwd) rs = i;
+      form.push(s.id);
+      if (s.bwd) { const body = segs2.slice(rs, s.end ? i : i + 1).filter(x => !x.end); body.forEach(x => { x.rep = 1; }); form.push(...body.map(x => x.id)); rs = i + 1; }
+      else if (s.end) rs = i + 1;
+    });
+    const sec = segs2.map(s => { const o = { id: s.id, n: s.bars.map(b => b.toks).join(' | '), c: s.bars.map(b => b.ch).join(' | '), lab: s.lab }; if (s.end) o.volta = s.end; if (s.rep) o.rep = 1; return o; });
+    const tonicSp = spell(K.tonic), keyName = nm(tonicSp).replace('#', '♯').replace(/b$/, '♭') + (K.minor ? ' minor' : ' major');
+    const tm = 60 + K.tonic, warm = (K.minor ? [0, 2, 3, 5, 7] : [0, 2, 4, 5, 7]).map(iv => pstr(spell(tm + iv), tm + iv));
+    const toks = sec.map(x => x.n).join(' ');
+    const lev = clamp(1 + (/\/(16|8\.)/.test(toks) ? 1 : 0) + (/T3\[/.test(toks) ? 1 : 0) + (ms[ms.length - 1] - ms[0] > 12 ? 1 : 0) + (B.length > 24 ? 1 : 0), 1, 5);
+    const title = (Md.title || fname.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')).trim().slice(0, 60) || 'My song';
+    const notesOut = [];
+    notesOut.push(Md.harmonies ? 'Chord letters come from your file.' : 'Your file had no chord letters, so the app suggested simple ones from the melody.');
+    if (shift) notesOut.push('Moved ' + (shift > 0 ? 'up' : 'down') + ' ' + Math.abs(shift / 12) + (Math.abs(shift) > 12 ? ' octaves' : ' octave') + ' to sit on the treble staff.');
+    if (rounded) notesOut.push('Some rhythms were rounded to the nearest sixteenth. Listen once and compare with your sheet.');
+    const raw = {
+      id: 'my-' + Date.now().toString(36), kind: 'nigun', t: title, short: title.length > 18 ? title.slice(0, 17) + '…' : title, he: '', by: 'My songs', group: 'my',
+      attrib: '', attribText: 'Added by you from your own sheet file (' + fname + ').', credit: '', creditUrl: '',
+      key: keyName, time: Md.bars[0].meter, tempo: Math.round(clamp(Md.tempo || 80, 40, 180)),
+      pick: Md.pick ? conv(Md.pick, Md.pick.len) : '', sec, form, lev, warm,
+      warmName: keyName + ': ' + warm.map(x => nameOf(pn(x))).join(' '),
+      about: 'Added on ' + today() + ' from ' + fname + '. The melody is the top line of the first part. ' + notesOut.join(' '),
+      words: '', partial: '', added: new Date().toISOString(), file: fname,
+    };
+    try { buildSong(raw); } catch (e) { throw new Error('The music was read, but it could not be laid out (' + e.message + ').'); }
+    return { raw, info: { bars: B.length + (Md.pick ? 1 : 0), notes: notes.length, key: keyName, time: Md.bars[0].meter, chords: Md.harmonies ? 'from the file' : 'suggested', parts: buildSong(raw).parts.length, notes2: notesOut } };
+  }
+
+  /* ---- files ---- */
+  const decodeXml = u8 => (u8[0] === 0xFF && u8[1] === 0xFE) ? new TextDecoder('utf-16le').decode(u8) : (u8[0] === 0xFE && u8[1] === 0xFF) ? new TextDecoder('utf-16be').decode(u8) : new TextDecoder().decode(u8);
+  async function mxlText(buf) {
+    const b = new Uint8Array(buf), v = new DataView(buf);
+    let e = -1; for (let i = b.length - 22; i >= Math.max(0, b.length - 65557); i--) if (v.getUint32(i, true) === 0x06054b50) { e = i; break; }
+    if (e < 0) throw new Error('This .mxl file could not be opened.');
+    const n = v.getUint16(e + 10, true); let p = v.getUint32(e + 16, true); const files = {};
+    for (let i = 0; i < n && v.getUint32(p, true) === 0x02014b50; i++) {
+      const meth = v.getUint16(p + 10, true), csz = v.getUint32(p + 20, true), nl = v.getUint16(p + 28, true), xl = v.getUint16(p + 30, true), cl = v.getUint16(p + 32, true), lo = v.getUint32(p + 42, true);
+      files[new TextDecoder().decode(b.subarray(p + 46, p + 46 + nl))] = { meth, csz, lo }; p += 46 + nl + xl + cl;
+    }
+    const get = async name => {
+      const f = files[name]; if (!f) return null;
+      const st = f.lo + 30 + v.getUint16(f.lo + 26, true) + v.getUint16(f.lo + 28, true), data = b.slice(st, st + f.csz);
+      if (f.meth === 0) return data; if (f.meth !== 8) throw new Error('This .mxl file uses an unsupported compression.');
+      if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot open .mxl files. Export as uncompressed MusicXML (.musicxml) instead.');
+      return new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    };
+    let path = null; const c = await get('META-INF/container.xml');
+    if (c) { const rf = new DOMParser().parseFromString(decodeXml(c), 'application/xml').getElementsByTagName('rootfile')[0]; if (rf) path = rf.getAttribute('full-path'); }
+    if (!path || !files[path]) path = Object.keys(files).find(x => !x.startsWith('META-INF') && /\.(xml|musicxml)$/i.test(x));
+    const data = path && await get(path); if (!data) throw new Error('No score was found inside this .mxl file.');
+    return decodeXml(data);
+  }
+  async function fromFile(file) {
+    const name = file.name || 'song';
+    if (/\.(pdf|png|jpe?g|heic|heif|gif|webp|tiff?|bmp)$/i.test(name)) { const e = new Error('IMAGE'); e.image = true; throw e; }
+    const buf = await file.arrayBuffer(), u8 = new Uint8Array(buf), head = String.fromCharCode(...u8.subarray(0, 4));
+    if (head === '%PDF' || head.startsWith('\x89PNG') || head.startsWith('\xFF\xD8\xFF')) { const e = new Error('IMAGE'); e.image = true; throw e; }
+    const Md = head === 'MThd' ? fromMidi(buf) : head === 'PK\x03\x04' ? fromMusicXML(await mxlText(buf)) : fromMusicXML(decodeXml(u8));
+    return toRaw(Md, name);
+  }
+
+  /* ---- keep SONGS / NIGUNIM in step with the store ---- */
+  function sync() {
+    const want = list().filter(valid), ids = new Set(want.map(r => r.id)); let changed = false;
+    for (let i = SONGS.length - 1; i >= 0; i--) if (SONGS[i].group === 'my' && !ids.has(SONGS[i].id)) { SONGS.splice(i, 1); changed = true; }
+    for (let i = NIGUNIM.length - 1; i >= 0; i--) if (NIGUNIM[i].group === 'my' && !ids.has(NIGUNIM[i].id)) NIGUNIM.splice(i, 1);
+    want.forEach(r => { const j = SONGS.findIndex(s => s.id === r.id); if (j < 0) { SONGS.push(buildSong(r)); NIGUNIM.push(r); changed = true; } else if (SONGS[j].t !== r.t) { SONGS[j] = buildSong(r); NIGUNIM[NIGUNIM.findIndex(x => x.id === r.id)] = r; changed = true; } });
+    return changed;
+  }
+  function add(raw) { Store.change(x => { x.my = Object.assign({}, x.my || {}); x.my[raw.id] = raw; }); sync(); }
+  function remove(id) { Store.change(x => { x.my = Object.assign({}, x.my || {}); x.my[id] = { id, del: 1 }; }); sync(); }
+  function rename(id, t) { const r = (Store.s.my || {})[id]; if (!r || !t.trim()) return; const n = Object.assign({}, r, { t: t.trim().slice(0, 60) }); n.short = n.t.length > 18 ? n.t.slice(0, 17) + '…' : n.t; Store.change(x => { x.my = Object.assign({}, x.my || {}); x.my[id] = n; }); sync(); }
+  return { list, valid, fromFile, add, remove, rename, sync };
+})();
 const SONGS = NIGUNIM.map(buildSong);
+MySongs.sync();
 const songById = id => SONGS.find(s => s.id === id);
 
 /* ---------------- notation ---------------- */
@@ -2583,7 +2997,7 @@ const Player = (() => {
     $('#p-title').textContent = S.t; $('#p-he').textContent = S.he || '';
     $('#p-by').innerHTML = lib ? `${esc(S.by)} · ${esc(S.key)} · ${S.bpb}/4 · ${S.tempo} bpm${S.attrib === 'weak' ? ' · <span class="attr">attributed</span>' : S.attrib === 'moderate' ? ' · <span class="attr">traditionally attributed</span>' : ''}` : esc(S.warmName || 'One page, played once, slowly, without stopping.');
     $('#p-stars').innerHTML = lib ? starHtml(starsOf(S), true) : '';
-    $('#p-about').innerHTML = lib ? `<p>${esc(S.about)}</p>${S.words ? `<p lang="he" dir="rtl" class="words">${esc(S.words)}</p>` : ''}<p><b>Attribution:</b> ${heb(esc(S.attribText))}</p><p><b>Hand position:</b> ${esc(S.warmName)}. <button class="btn small" data-go="w:${S.id}">Warm-up</button></p><p class="small muted">${esc(PARTIAL[S.id] || '')} Melody line only, with this page's own chord letters and fingering.</p>` : '';
+    $('#p-about').innerHTML = lib ? `<p>${esc(S.about)}</p>${S.words ? `<p lang="he" dir="rtl" class="words">${esc(S.words)}</p>` : ''}<p><b>Attribution:</b> ${heb(esc(S.attribText))}</p><p><b>Hand position:</b> ${esc(S.warmName)}. <button class="btn small" data-go="w:${S.id}">Warm-up</button></p>${S.group === 'my' ? `<p class="row"><button class="btn small" type="button" data-my="rename">Rename</button><button class="btn small" type="button" data-my="remove">Remove from My songs</button></p>` : `<p class="small muted">${esc(PARTIAL[S.id] || '')} Melody line only, with this page's own chord letters and fingering.</p>`}` : '';
     $('.p-about').hidden = !lib;
     $('#p-credit').innerHTML = lib ? `<a href="${esc(S.creditUrl)}" target="_blank" rel="noopener">${esc(S.credit)}</a>` : '';
   }
@@ -2645,7 +3059,7 @@ const Player = (() => {
   }
   function renderLib() {
     const box = $('#lib'); box.textContent = '';
-    const GROUPS = [['bh', 'Baal HaSulam'], ['bst', 'Baal Shem Tov'], ['ar', 'Alter Rebbe (Baal HaTanya)'], ['more', 'More nigunim']];
+    const GROUPS = [['bh', 'Baal HaSulam'], ['bst', 'Baal Shem Tov'], ['ar', 'Alter Rebbe (Baal HaTanya)'], ['more', 'More nigunim'], ['my', 'My songs']];
     GROUPS.forEach(([g, name]) => {
       const songs = SONGS.filter(s => s.group === g); if (!songs.length) return;
       box.append(h('div', 'lib-h', name));
@@ -2657,6 +3071,11 @@ const Player = (() => {
         box.append(b);
       });
     });
+    if (!SONGS.some(s => s.group === 'my')) box.append(h('div', 'lib-h', 'My songs'));
+    const add = h('button', 'card card-add'); add.type = 'button';
+    add.innerHTML = '<span class="card-t"><b>+ Add a song</b></span><span class="card-m">From a MusicXML or MIDI file</span>';
+    add.addEventListener('click', () => MyUI.open());
+    box.append(add);
   }
 
   /* ----- public: select a song, configure from a link ----- */
@@ -3448,7 +3867,42 @@ function setNaming(n) {
 }
 $('#nm-letter').addEventListener('click', () => setNaming('letter'));
 $('#nm-solf').addEventListener('click', () => setNaming('solf'));
+/* ---------------- my songs: the "Add a song" dialog, rename and remove ---------------- */
+const MyUI = (() => {
+  const dlg = $('#my-dlg'), out = $('#my-out'), inp = $('#my-file');
+  let pending = null;
+  const shortOf = t => t.length > 18 ? t.slice(0, 17) + '…' : t;
+  function open() { out.textContent = ''; pending = null; inp.value = ''; $('#my-help').open = false; if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
+  const close = () => { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); };
+  inp.addEventListener('change', async () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    out.innerHTML = `<p class="msg">Reading ${esc(f.name)}…</p>`; pending = null;
+    try {
+      const r = await MySongs.fromFile(f); pending = r.raw; const I = r.info;
+      out.innerHTML = `<div class="my-prev">
+        <label class="small">Name<input id="my-title" type="text" maxlength="60" value="${esc(pending.t)}"></label>
+        <p class="small"><b>${esc(I.key)}</b> · ${I.time}/4 · ${I.bars} bars · ${I.notes} notes · ${I.parts} ${I.parts === 1 ? 'part' : 'parts'} to learn · chords ${esc(I.chords)}</p>
+        ${I.notes2.map(x => `<p class="small muted">${esc(x)}</p>`).join('')}
+        <div class="row"><button class="btn primary" type="button" id="my-add">Add to My songs</button></div></div>`;
+      $('#my-add').addEventListener('click', () => {
+        const t = $('#my-title').value.trim(); if (t) { pending.t = t.slice(0, 60); pending.short = shortOf(pending.t); }
+        MySongs.add(pending); const id = pending.id; close();
+        if (window.View) View.go('nigunim', true); Player.select(id);
+      });
+    } catch (e) {
+      if (e.image) { out.innerHTML = '<p class="msg bad">This page can’t read a picture or PDF of music by itself. Turn it into MusicXML first (free, below), then choose that file here.</p>'; $('#my-help').open = true; }
+      else out.innerHTML = `<p class="msg bad">${esc(e.message || 'This file could not be read.')}</p>`;
+    }
+  });
+  $('#p-about').addEventListener('click', e => {
+    const b = e.target.closest('[data-my]'); if (!b) return; const S = Player.state.song; if (!S || S.group !== 'my') return;
+    if (b.dataset.my === 'rename') { const t = prompt('New name for this song', S.t); if (t && t.trim()) { MySongs.rename(S.id, t); Player.select(S.id, true); } }
+    else if (confirm('Remove “' + S.t + '” from My songs?')) { MySongs.remove(S.id); Player.select(SONGS[0].id); }
+  });
+  return { open };
+})();
 Store.on((s, synced) => {
+  MySongs.sync();
   const sy = $('#sync'); sy.textContent = synced ? 'Synced to your account' : 'Saved in this browser'; sy.classList.toggle('on', !!synced);
   if (View.cur === 'today') Today.render();
   if (View.cur === 'nigunim' && !Player.busy) Player.renderSide();
