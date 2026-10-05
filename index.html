@@ -3868,10 +3868,13 @@ const Player = (() => {
   /* ----- keys on the dock ----- */
   function glowFor(mo, show) {
     const ms = [...mo.need.keys()];
-    if (!show) { Kb.ensure(ms); Kb.clear(); return; }
+    /* Listen and Step: the whole current chord glows gold on the keyboard (when you play only the melody) */
+    const chV = run && (run.kind === 'listen' || run.kind === 'step') && hands() === 'r' && mo.chordV ? mo.chordV : [];
+    const chHl = chV.filter(x => !mo.need.has(x.p.m)).map(x => ({ m: x.p.m, tone: 'brass', finger: null })), all = ms.concat(chHl.map(x => x.m));
+    if (!show) { Kb.ensure(all); if (chHl.length) Kb.setHl(chHl); else Kb.clear(); return; }
     const hl = [];
     mo.need.forEach((p, m) => { const lhNote = mo.lhSet && mo.lhSet.has(m); hl.push({ m, tone: lhNote ? 'brass' : 'felt', finger: st.fingers === 'off' ? null : (p.f || (mo.fmap && mo.fmap.get(m)) || null) }); });
-    Kb.ensure(ms); Kb.setHl(hl);
+    Kb.ensure(all); Kb.setHl(hl.concat(chHl));
   }
   /* step moments: the right-hand onsets and (when you play it) the left-hand chord changes */
   function moments(P) {
@@ -3879,7 +3882,13 @@ const Player = (() => {
     const at = (t, bi) => { const k = Math.round(t * 1000) / 1000; if (!map.has(k)) map.set(k, { t: k, bi, need: new Map(), ids: [], lhSet: new Set(), fmap: new Map() }); return map.get(k); };
     if (hd !== 'l') P.evs.forEach(e => { if (e.n.rest || e.n.cont) return; const mo = at(e.t, e.bi); mo.need.set(e.n.m, e.n); mo.ids.push(e.n.id); });
     if (grand() && hd !== 'r') P.chords.forEach(c => { if (!c.v.length) return; const mo = at(c.t, c.bi); c.v.forEach(x => { mo.need.set(x.p.m, x.p); mo.lhSet.add(x.p.m); mo.fmap.set(x.p.m, x.f); }); mo.ids.push(c.id); mo.chord = c.c.name; });
-    return [...map.values()].sort((a, b) => a.t - b.t);
+    return chordShapes([...map.values()].sort((a, b) => a.t - b.t), P);
+  }
+  /* the chord sounding at each moment, as a full three-note shape (closest to the previous one) */
+  function chordShapes(mos, P) {
+    const cs = P.chords.slice().sort((a, b) => a.t - b.t); let ci = -1, prevName = null, prevV = null, curV = null;
+    mos.forEach(mo => { while (ci + 1 < cs.length && cs[ci + 1].t <= mo.t + 1e-6) ci++; const nm = ci >= 0 ? cs[ci].c.name : null; if (nm !== prevName) { curV = nm ? lhVoicing(nm, 'triad', prevV) : null; if (curV && curV.length) prevV = curV; prevName = nm; } mo.chordV = curV; });
+    return mos;
   }
   /* everything that moves in time: rh onsets and chord changes, for the cursor */
   function visMoments(P) {
@@ -3887,7 +3896,7 @@ const Player = (() => {
     const at = (t, bi) => { const k = Math.round(t * 1000) / 1000; if (!map.has(k)) map.set(k, { t: k, bi, ids: [], need: new Map(), lhSet: new Set(), fmap: new Map() }); return map.get(k); };
     P.evs.forEach(e => { if (e.n.cont) return; const mo = at(e.t, e.bi); if (!e.n.rest) { mo.ids.push(e.n.id); if (hands() !== 'l') mo.need.set(e.n.m, e.n); } else mo.rest = mo.rest || e.n.id; });
     P.chords.forEach(c => { const mo = at(c.t, c.bi); mo.chord = c.c.name; if (grand() && c.v.length) { mo.ids.push(c.id); if (hands() !== 'r') c.v.forEach(x => { mo.need.set(x.p.m, x.p); mo.lhSet.add(x.p.m); mo.fmap.set(x.p.m, x.f); }); } });
-    return [...map.values()].sort((a, b) => a.t - b.t);
+    return chordShapes([...map.values()].sort((a, b) => a.t - b.t), P);
   }
 
   /* ----- running ----- */
@@ -3963,7 +3972,7 @@ const Player = (() => {
           if (mo.ids.length) cursorAt(mo.ids, mo.bi);
           else if (mo.rest) { cursorAt([mo.rest], mo.bi); }
           const nx = vm.slice(i + 1).find(x => x.ids.length); nextAt(nx ? nx.ids : []);
-          if (!yourTurn && (st.glow === 'on' || kind === 'listen' || kind === 'echo') && mo.need.size) glowFor(mo, true); else if (mo.need.size) { Kb.ensure([...mo.need.keys()]); Kb.clear(); }
+          if (!yourTurn && (st.glow === 'on' || kind === 'listen' || kind === 'echo') && mo.need.size) glowFor(mo, true); else if (mo.need.size) { Kb.ensure([...mo.need.keys()]); Kb.clear(); } else if (kind === 'listen' && mo.chord && mo.chordV) glowFor(mo, true);
           if (mo.chord && st.lh !== 'off') Mode.label(({ listen: 'Listening', echo: 'Echo', tap: 'Tap rhythm', play: 'Play along' })[kind] + ' · chord ' + chordLabel(mo.chord));
         } }));
         if (kind === 'tap' || kind === 'play') P.evs.forEach(e => { if (e.n.rest || e.n.cont) return; if (kind === 'tap' || hd !== 'l') expect.push({ t: at + e.t * b, n: e.n }); });
