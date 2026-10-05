@@ -889,7 +889,7 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
     <div class="cl-row"><span class="small muted">Show</span><span class="seg" id="cl-filter" role="group" aria-label="Show chords"><button data-v="used" aria-pressed="false">In my songs</button><button data-v="maj" aria-pressed="false">Major</button><button data-v="min" aria-pressed="false">Minor</button><button data-v="sev" aria-pressed="false">7th &amp; dim</button><button data-v="all" aria-pressed="false">All</button></span></div>
     <div class="cl-row"><span class="small muted">Set every chord to</span><span class="row"><button class="btn small" data-clall="0">Root position</button><button class="btn small" data-clall="1">1st inversion</button><button class="btn small" data-clall="2">2nd inversion</button></span></div>
     <div class="cl-legend"><span><i style="background:var(--hl-felt-b)"></i>the chord's letter (root)</span><span><i style="background:var(--hl-brass-b)"></i>the other two notes</span><span>Numbers: left-hand fingers, low to high</span></div>
-    <div class="cl-row"><button class="btn small primary" type="button" data-save>⤓ Save to settings.js</button><span class="small muted" id="set-status"></span></div>
+    <div class="cl-row"><button class="btn small primary" type="button" data-save>⤓ Save to settings.js</button><button class="btn small" type="button" data-relink title="Choose which folder Save writes settings.js into">Change folder</button><span class="small muted" id="set-status"></span></div>
     <p class="small muted" id="cl-note"></p>
   </div>
   <div class="cl-grid" id="cl-grid"></div>
@@ -5346,7 +5346,7 @@ const MyUI = (() => {
 /* ---------------- Save: write everything to settings.js ---------------- */
 const Saver = (() => {
   const when = () => { const F = SetFile.file; return F && F.saved ? new Date(F.saved).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
-  let justSaved = '', lastHandle = null;
+  let justSaved = '';
   function text() {
     if (justSaved) return justSaved;
     if (SetFile.unsaved) return SetFile.migrated ? 'Your earlier progress was found in this browser. Press Save, put settings.js next to index.html, then commit and push.' : 'Unsaved changes. Press Save and commit settings.js, or they are gone when you close the page.';
@@ -5355,6 +5355,7 @@ const Saver = (() => {
   }
   function paint() {
     $$('[data-save]').forEach(b => b.classList.toggle('unsaved', SetFile.unsaved));
+    $$('[data-relink]').forEach(b => { b.hidden = !FS.ok; });
     const sy = $('#sync'); sy.textContent = SetFile.unsaved ? 'Not saved yet' : 'From settings.js'; sy.classList.toggle('unsaved', SetFile.unsaved); sy.classList.toggle('on', !SetFile.unsaved && !!SetFile.file);
     if (View.cur === 'chords') ChordLib.status();
   }
@@ -5376,22 +5377,53 @@ const Saver = (() => {
 window.STK_SETTINGS = ${JSON.stringify(o, null, 2)};
 `;
   }
-  async function save() {
-    const blob = new Blob([fileText()], { type: 'text/javascript' });
-    let saved = false;
-    if (window.showSaveFilePicker) {
-      /* id: the browser itself reopens the folder last used for this picker (your repo root after the first save);
-         startIn: within this visit, start right at the settings.js you saved last */
-      const opts = { id: 'stk-settings', suggestedName: 'settings.js', types: [{ description: 'Settings file', accept: { 'text/javascript': ['.js'] } }] };
-      if (lastHandle) opts.startIn = lastHandle;
-      try { const fh = await window.showSaveFilePicker(opts); lastHandle = fh; const w = await fh.createWritable(); await w.write(blob); await w.close(); saved = true; }
-      catch (e) { if (e && e.name === 'AbortError') return; }
+  /* the linked piano folder: picked once, then remembered by the browser (the folder link is the only thing kept in the browser).
+     Save then writes settings.js into it with no picker. Chrome and Edge on a computer only; elsewhere Save downloads the file. */
+  const FS = (() => {
+    const ok = !!window.showDirectoryPicker && !!window.indexedDB;
+    let dir = null;
+    const db = () => new Promise((res, rej) => { const r = indexedDB.open('stk-folder', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    const idb = (mode, fn) => db().then(d => new Promise((res, rej) => { const t = d.transaction('h', mode), q = fn(t.objectStore('h')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }));
+    /* load the remembered folder early, so a Save click can ask for permission straight away */
+    const loaded = ok ? idb('readonly', st => st.get('dir')).then(h => { dir = h || null; }).catch(() => {}) : Promise.resolve();
+    async function pick() {
+      const h = await window.showDirectoryPicker({ id: 'stk-settings', mode: 'readwrite' });
+      try { await h.getFileHandle('index.html'); } catch (e) { if (!confirm('This folder has no index.html. Is it really your piano folder? Press OK to use it anyway.')) return null; }
+      dir = h; try { await idb('readwrite', st => st.put(h, 'dir')); } catch (e) {}
+      return h;
     }
-    if (!saved) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'settings.js'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
-    SetFile.clean();
-    justSaved = (saved ? 'Saved settings.js.' : 'Downloaded settings.js.') + ' Put it next to index.html (replace the old one), then commit and push.';
-    paint();
+    async function write(text) {
+      await loaded;
+      if (dir) {
+        let perm = 'prompt';
+        try { perm = await dir.queryPermission({ mode: 'readwrite' }); if (perm !== 'granted') perm = await dir.requestPermission({ mode: 'readwrite' }); } catch (e) { perm = 'denied'; }
+        if (perm !== 'granted') dir = null;
+      }
+      if (!dir && !(await pick())) return false;
+      const fh = await dir.getFileHandle('settings.js', { create: true }), w = await fh.createWritable();
+      await w.write(text); await w.close();
+      return dir.name;
+    }
+    async function relink() { try { return await pick(); } catch (e) { return null; } }
+    return { ok, write, relink, get name() { return dir ? dir.name : ''; }, loaded };
+  })();
+  async function save() {
+    const text = fileText();
+    if (FS.ok) {
+      try {
+        const name = await FS.write(text); if (!name) return;
+        SetFile.clean(); justSaved = 'Saved to ' + name + '/settings.js. Commit and push it to have it on every device.'; paint(); return;
+      } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const blob = new Blob([text], { type: 'text/javascript' }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'settings.js'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    SetFile.clean(); justSaved = 'Downloaded settings.js. Put it next to index.html (replace the old one), then commit and push.'; paint();
   }
+  document.addEventListener('click', async e => {
+    const b = e.target.closest ? e.target.closest('[data-relink]') : null; if (!b) return;
+    e.preventDefault(); const h = await FS.relink(); if (h) { justSaved = 'Linked folder: ' + h.name + '. Save now writes settings.js there.'; paint(); }
+  });
+
   document.addEventListener('click', e => { const b = e.target.closest ? e.target.closest('[data-save]') : null; if (b) { e.preventDefault(); save(); } });
   window.addEventListener('beforeunload', e => { if (SetFile.unsaved) { e.preventDefault(); e.returnValue = ''; } });
   return { text, paint, save };
