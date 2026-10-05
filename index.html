@@ -543,22 +543,30 @@ body{background-color:var(--bg);background-image:url("data:image/svg+xml,%3Csvg%
 .sheet{padding-top:46px}
 .fs-bar{position:absolute;right:8px;top:8px;z-index:3;display:flex;gap:6px;align-items:center}
 .fs-bar #fs-msg,.fs-bar #fs-go,.fs-bar #fs-listen,.fs-bar .fs-size{display:none}
-#sheet.fs .fs-bar #fs-listen{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;min-height:0;flex:0 0 40px;padding:0;border-radius:50%;background:linear-gradient(180deg,#FFFDF7,#EFE4CF);box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(60,40,15,.25)}
+body.sheet-fs .fs-bar #fs-listen{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;min-height:0;flex:0 0 36px;padding:0;border-radius:50%;background:linear-gradient(180deg,#FFFDF7,#EFE4CF);box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(60,40,15,.25)}
 #fs-listen .spk{width:22px;height:22px;display:block}
 #fs-listen .spk-body{fill:var(--ink);stroke:var(--ink);stroke-width:.6;stroke-linejoin:round}
 #fs-listen .spk-w1,#fs-listen .spk-w2{fill:none;stroke:var(--ink);stroke-width:1.9;stroke-linecap:round}
-#sheet.fs .fs-bar #fs-listen.on{background:var(--felt);border-color:var(--felt);box-shadow:0 0 0 3px color-mix(in srgb,var(--felt) 25%,transparent)}
+body.sheet-fs .fs-bar #fs-listen.on{background:var(--felt);border-color:var(--felt);box-shadow:0 0 0 3px color-mix(in srgb,var(--felt) 25%,transparent)}
 #fs-listen.on .spk-body{fill:#FFF8EE;stroke:#FFF8EE}
 #fs-listen.on .spk-w1,#fs-listen.on .spk-w2{stroke:#FFF8EE;animation:spkw 1s ease-in-out infinite}
 #fs-listen.on .spk-w2{animation-delay:.25s}
 @keyframes spkw{0%,100%{opacity:.25}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){#fs-listen.on .spk-w1,#fs-listen.on .spk-w2{animation:none}}
-#sheet.fs .fs-bar .fs-size{display:inline-flex}
+body.sheet-fs .fs-bar .fs-size{display:inline-flex}
 body.sheet-fs{overflow:hidden}
-#sheet.fs{position:fixed;left:0;right:0;top:0;bottom:var(--dock-h);z-index:29;margin:0;border:0;border-radius:0;overflow:auto;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top,0px) + 58px) max(10px,env(safe-area-inset-right,0px)) 24px max(10px,env(safe-area-inset-left,0px))}
-#sheet.fs .fs-bar{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 8px) max(10px,env(safe-area-inset-right,0px)) 8px max(10px,env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--paper) 94%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-#sheet.fs .fs-bar #fs-msg{display:block;flex:1;min-width:0;min-height:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#sheet.fs .fs-bar #fs-go{display:inline-flex}
+#sheet.fs{position:fixed;left:0;right:0;top:0;bottom:var(--dock-h);z-index:29;margin:0;border:0;border-radius:0;overflow:auto;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top,0px) + 10px) max(10px,env(safe-area-inset-right,0px)) 24px max(10px,env(safe-area-inset-left,0px))}
+/* in full screen the controls live in the keyboard dock's top line, so the sheet starts at the very top */
+body.sheet-fs .fs-bar{position:static;flex:1;min-width:0;padding:0 2px}
+body.sheet-fs .fs-bar #fs-msg{font:500 .78rem var(--f-mono);color:var(--on-ebony-2)}
+body.sheet-fs .fs-bar #fs-msg.good{color:#9BD19B}
+body.sheet-fs .fs-bar #fs-msg.bad{color:#F2A0A0}
+body.sheet-fs #dock-mode{display:none!important}
+body.sheet-fs .dock.collapsed .dock-in{display:flex;align-items:center;gap:8px}
+body.sheet-fs .dock.collapsed .toast-kb{display:none}
+body.sheet-fs .dock.collapsed .dock-bar{flex:0 0 auto}
+body.sheet-fs .fs-bar #fs-msg{display:block;flex:1;min-width:0;min-height:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.sheet-fs .fs-bar #fs-go{display:inline-flex}
 .sheet.memory g.n:not(.cur) .lh-f,.sheet.memory g.n:not(.cur) .lh-o,.sheet.memory g.n:not(.cur) .lh-r,.sheet.memory g.n:not(.cur) .lh-i,.sheet.memory g.n:not(.cur) .hin,.sheet.memory g.n:not(.cur) .acc,.sheet.memory g.n:not(.cur) .fgr{opacity:.05}
 .countin{position:fixed;inset:auto;top:calc(env(safe-area-inset-top,0px) + 70px);right:max(14px,env(safe-area-inset-right));left:auto;z-index:35;min-width:88px;padding:6px 22px;border-radius:999px;font-size:clamp(2rem,8vw,3.4rem);text-align:center;background:color-mix(in srgb,var(--paper) 92%,transparent);border:2px solid var(--felt);box-shadow:0 8px 24px rgba(60,30,10,.25);white-space:nowrap}
 /* rating panel + big Next button, both above the keyboard dock */
@@ -3851,7 +3859,7 @@ const Player = (() => {
     const r = svg.getBoundingClientRect(), sc = r.width / lay.VW;
     const yA = r.top + (Ln.yTop - 60) * sc, yB = r.top + (nxt.yBot + 30) * sc;
     const bottom = window.innerHeight - (Kb.hidden ? 50 : Kb.dockH) - 8;
-    if (sheet.classList.contains('fs')) { const top = $('.fs-bar', sheet).getBoundingClientRect().bottom + 6; if (yA < top || yB > bottom) sheet.scrollBy({ top: yA - top, behavior: reduced() ? 'auto' : 'smooth' }); return; }
+    if (sheet.classList.contains('fs')) { const top = sheet.getBoundingClientRect().top + 6; if (yA < top || yB > bottom) sheet.scrollBy({ top: yA - top, behavior: reduced() ? 'auto' : 'smooth' }); return; }
     const navB = ($('.nav') || document.body).getBoundingClientRect().bottom + 6;
     if (yA < navB || yB > bottom) window.scrollBy({ top: yA - navB, behavior: reduced() ? 'auto' : 'smooth' });
   }
@@ -4242,10 +4250,11 @@ const Player = (() => {
   });
   let rt = null, lastW = 0; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { const w = sheet.clientWidth; if (Math.abs(w - lastW) > 20 && !run) { lastW = w; render(); } }, 160); });
   /* full screen sheet: the same sheet, just bigger; Step, Play along, keys and pedals keep working */
-  const fsB = $('#p-full'), fsGo = $('#fs-go'), fsMsg = $('#fs-msg');
+  const fsB = $('#p-full'), fsGo = $('#fs-go'), fsMsg = $('#fs-msg'), fsBar = $('.fs-bar', sheet);
   function setFs(on) {
     if (on === sheet.classList.contains('fs')) return;
     sheet.classList.toggle('fs', on); document.body.classList.toggle('sheet-fs', on);
+    if (on) $('#dock .dock-in').prepend(fsBar); else sheet.prepend(fsBar);
     fsB.textContent = on ? '✕ Exit' : '⛶ Full screen'; fsB.setAttribute('aria-pressed', String(on)); fsB.title = on ? 'Back to the normal page (Esc)' : 'Show the sheet on the whole screen';
     const d = document, el = d.documentElement;
     try { if (on && el.requestFullscreen && !d.fullscreenElement) el.requestFullscreen().catch(() => {}); else if (!on && d.fullscreenElement) d.exitFullscreen().catch(() => {}); } catch (e) { /* iPhone: no browser full screen, the sheet still fills the page */ }
