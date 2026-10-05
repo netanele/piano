@@ -1134,7 +1134,7 @@ const Kb = (() => {
   const flash = (ms, dur) => { ms.forEach(m => { down.add(m); paintKey(m); }); setTimeout(() => ms.forEach(m => { down.delete(m); paintKey(m); }), dur); };
   function userOn(m, silent) { if (!silent) Audio.noteOn(m); down.add(m); paintKey(m); subs.forEach(f => f(m)); }
   function userOff(m, silent) { if (!silent) Audio.noteOff(m); down.delete(m); paintKey(m); }
-  const active = new Map();
+  const active = new Map(), midiT = new Map();
   const keyAt = (x, y) => { const e = document.elementFromPoint(x, y); const k = e && e.closest ? e.closest('.key') : null; return k && keysEl.contains(k) ? +k.dataset.m : null; };
   kbEl.addEventListener('pointerdown', e => { e.preventDefault(); try { kbEl.setPointerCapture(e.pointerId); } catch (err) {} const m = keyAt(e.clientX, e.clientY); active.set(e.pointerId, m); if (m != null) userOn(m); });
   kbEl.addEventListener('pointermove', e => { if (!active.has(e.pointerId)) return; const m = keyAt(e.clientX, e.clientY), prev = active.get(e.pointerId); if (m !== prev) { if (prev != null) userOff(prev); if (m != null) userOn(m); active.set(e.pointerId, m); } });
@@ -1169,7 +1169,7 @@ const Kb = (() => {
   let rt = null;
   window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { const keep = whites[start + Math.floor(count / 2)]; fit(); count = base; start = clamp(wi(keep) - Math.floor(count / 2), 0, NW - count); render(); }, 120); });
   fit(); count = base; start = count < 12 ? wi(60) : clamp(wi(60) - Math.floor((count - 8) / 2), 0, NW - count); render(); setPad();
-  return { render, ensure, setHl, clear, flash, setHidden, onNote: f => subs.push(f), external: (m, on) => on ? userOn(m, true) : userOff(m, true), get dockH() { return dock.offsetHeight; }, get hidden() { return dock.classList.contains('collapsed'); } };
+  return { render, ensure, setHl, clear, flash, setHidden, onNote: f => subs.push(f), external: (m, on) => { const now = performance.now(); if (on) { /* a piano that sends each key twice (two USB ports, or on/off/on) counts once */ if (now - (midiT.get(m) || -1e9) < 120) return; midiT.set(m, now); userOn(m, true); } else userOff(m, true); }, get dockH() { return dock.offsetHeight; }, get hidden() { return dock.classList.contains('collapsed'); } };
 })();
 function showNote(m, tone = 'felt') { Kb.ensure([m]); Kb.setHl([{ m, tone }]); Audio.tap(m); }
 
@@ -1707,6 +1707,59 @@ const NIGUNIM = [
 "about": "Psalm 63: “My soul thirsts for You.” First section only (8 bars). Slow and singing.",
 "words": "צָמְאָה לְךָ נַפְשִׁי, כָּמַהּ לְךָ בְשָׂרִי (תהלים סג, ב)",
 "partial": ""
+},
+{
+"id": "kichilatzta",
+"t": "Ki Chilatzta Nafshi",
+"short": "Ki Chilatzta",
+"he": "כי חלצת נפשי",
+"by": "Traditional",
+"group": "more",
+"attrib": "",
+"attribText": "Composer not named on the sheet (title on the sheet: “Ki Hilatza Natfshi”).",
+"credit": "Melody read from your printed sheet (♩=90); chords as pencilled on it",
+"creditUrl": "",
+"key": "A minor",
+"time": 4,
+"tempo": 90,
+"pick": "",
+"sec": [
+{
+"id": "A",
+"lab": "A",
+"n": "E4/q A4/q C5/q B4/8 A4/8 | C5/h C5/q R/8 A4/8 | C5/q D5/8 E5/8 D5/q C5/16 B4/16~ B4/8 | A4/8 D5/8 A4/16 D5/16~ D5/8 C5/q B4/q | E4/q A4/q C5/q B4/8 A4/8 | C5/h C5/q R/8 A4/8 | C5/q D5/8 E5/8 D5/8. C5/16 R/8 B4/8 | A4/h. R/8 E4/8 | A4/h E4/q R/8 A4/8 | C5/h A4/q R/q | C5/q A4/q C5/q D5/q",
+"c": "Am | Am | Am Dm | F F E E | Am | Am | Am Am Dm E | Am | Am | Am | Am G"
+},
+{
+"id": "B",
+"lab": "B",
+"n": "E5/h. R/16 E4/16~ E4/8 | A4/h E4/q R/8 A4/8 | C5/h A4/q R/q | C5/q A4/q C5/q D5/q | E5/h. R/8 E5/8 | A5/h E5/q R/8 E5/8 | A5/h E5/h",
+"c": "C C C Dm | A | Am | Am G | C | Am | Am"
+},
+{
+"id": "C",
+"lab": "C",
+"n": "A5/q E5/q D5/q E5/q | D5/h. R/8 D5/8 | E5/h D5/q R/8 D5/8 | E5/h D5/q R/q | E5/8 D5/8 E5/8 D5/8 C5/q B4/q | A4/w",
+"c": "Am | Dm | Am Dm | Am Dm | E E7 | Am"
+}
+],
+"form": [
+"A",
+"B",
+"C"
+],
+"lev": 2,
+"warm": [
+"A4",
+"B4",
+"C5",
+"D5",
+"E5"
+],
+"warmName": "A minor: A B C D E",
+"about": "Psalm 116: “For You have delivered my soul from death.” The whole one-page sheet: 24 bars in three parts. Part B climbs to the high A.",
+"words": "כִּי חִלַּצְתָּ נַפְשִׁי מִמָּוֶת, אֶת עֵינִי מִן דִּמְעָה, אֶת רַגְלִי מִדֶּחִי (תהלים קטז, ח)",
+"partial": ""
 }
 ];
 
@@ -2240,7 +2293,7 @@ function starsOf(S) {
 }
 const starHtml = (x, big) => `<span class="stars${big ? ' big' : ''}${x.gold ? ' gold' : ''}" aria-label="${x.n} of 3 stars${x.gold ? ', gold' : ''}">${'★'.repeat(x.n)}<i>${'★'.repeat(3 - x.n)}</i></span>`;
 
-const PARTIAL = { chamol: 'The complete nigun.', pitchu: 'The complete nigun: all six sections, 52 bars, with its 3/4 bars and triplets.', besht: 'Section A, the part the source sheet shows.', bavos: 'The first two of its five sections.', tzama: 'The first section only.', koldodi: 'The opening phrase only.', keili: 'The whole one-page sheet as published (8 bars, played twice), moved from G minor up to A minor.', vaharikoti: 'The first section, with its two endings.' };
+const PARTIAL = { chamol: 'The complete nigun.', pitchu: 'The complete nigun: all six sections, 52 bars, with its 3/4 bars and triplets.', besht: 'Section A, the part the source sheet shows.', bavos: 'The first two of its five sections.', tzama: 'The first section only.', koldodi: 'The opening phrase only.', keili: 'The whole one-page sheet as published (8 bars, played twice), moved from G minor up to A minor.', vaharikoti: 'The first section, with its two endings.', kichilatzta: 'The whole one-page sheet.' };
 const heb = t => t.replace(/([\u0590-\u05FF][\u0590-\u05FF\s:'"\u05F3\u05F4.-]*[\u0590-\u05FF])/g, '<bdi dir="rtl">$1</bdi>');
 /* ---------------- player ---------------- */
 const Player = (() => {
@@ -2592,7 +2645,7 @@ const Player = (() => {
   }
   function renderLib() {
     const box = $('#lib'); box.textContent = '';
-    const GROUPS = [['bh', 'Baal HaSulam'], ['bst', 'Baal Shem Tov'], ['ar', 'Alter Rebbe (Baal HaTanya)']];
+    const GROUPS = [['bh', 'Baal HaSulam'], ['bst', 'Baal Shem Tov'], ['ar', 'Alter Rebbe (Baal HaTanya)'], ['more', 'More nigunim']];
     GROUPS.forEach(([g, name]) => {
       const songs = SONGS.filter(s => s.group === g); if (!songs.length) return;
       box.append(h('div', 'lib-h', name));
@@ -2678,6 +2731,8 @@ const Player = (() => {
       if (run.kind === 'tap') return tapNow();
       if (run.kind === 'play') { run.played.push({ m, t: audioNow() - (run.t0 || 0) }); return; }
       if (run.kind !== 'step') return;
+      /* one press = one step: a duplicate of the same key within 100 ms is the same press, not the next repeated note */
+      const now = performance.now(); if (m === run.lastM && now - run.lastT < 100) return; run.lastM = m; run.lastT = now;
       const mo = run.mos[run.i]; run.input++;
       if (run.left.has(m)) { run.left.delete(m); if (!run.left.size) stepNext(true); }
       else if (!mo.need.has(m)) { run.wrong++; run.mw++; const want = [...run.left].map(x => nameOf(mo.need.get(x))); say('That was ' + nm(m) + '. Look for ' + want.join(' + ') + (st.glow === 'off' ? '' : ' (it glows).'), 'bad'); glowFor(mo, true); }
