@@ -769,7 +769,7 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
         <span class="mono small" id="tempo-val">100%</span>
         <label class="tog"><input type="checkbox" id="opt-auto" checked> Auto tempo</label>
       </div>
-      <div class="sheet" id="sheet"><div class="fs-bar"><div class="msg" id="fs-msg" aria-hidden="true"></div><span class="seg fs-size" role="group" aria-label="Note size" id="fs-size"><button data-v="s" aria-pressed="false">S</button><button data-v="m" aria-pressed="false">M</button><button data-v="l" aria-pressed="false">L</button></span><button class="btn small" id="fs-listen" title="Hear the song with the cursor, then go back to your mode">🔊 Listen</button><button class="btn small primary" id="fs-go">▶ Start</button><button class="peek btn small" id="p-peek" hidden>Peek</button><button class="btn small" id="p-full" aria-pressed="false" title="Show the sheet on the whole screen">⛶ Full screen</button></div><svg id="sheet-svg" role="img" aria-label="Sheet music"></svg><div class="countin" id="countin" hidden></div></div>
+      <div class="sheet" id="sheet"><div class="fs-bar"><div class="msg" id="fs-msg" aria-hidden="true"></div><span class="seg fs-size" role="group" aria-label="Note size" id="fs-size"><button data-v="s" aria-pressed="false">S</button><button data-v="m" aria-pressed="false">M</button><button data-v="l" aria-pressed="false">L</button></span><button class="btn small" id="fs-listen" title="Listen: hear the song with the cursor, then go back to your mode" aria-label="Listen">🔊</button><button class="btn small primary" id="fs-go">▶ Start</button><button class="peek btn small" id="p-peek" hidden>Peek</button><button class="btn small" id="p-full" aria-pressed="false" title="Show the sheet on the whole screen">⛶ Full screen</button></div><svg id="sheet-svg" role="img" aria-label="Sheet music"></svg><div class="countin" id="countin" hidden></div></div>
       <details class="helpers" id="p-helpers">
         <summary>Helpers, left hand and sound</summary>
         <div class="hgrid">
@@ -4260,7 +4260,7 @@ const Player = (() => {
   const mirror = () => {
     if (!run && backMode) { if (st.mode === 'listen') { st.mode = backMode; renderModes(); } backMode = null; }
     fsMsg.textContent = msg.textContent; fsMsg.className = msg.className; fsGo.textContent = goB.textContent; fsGo.classList.toggle('stop', goB.classList.contains('stop'));
-    const lis = !!run && run.kind === 'listen'; fsListen.textContent = lis ? '■ Stop listening' : '🔊 Listen'; fsGo.hidden = lis;
+    const lis = !!run && run.kind === 'listen'; fsListen.textContent = lis ? '■' : '🔊'; fsListen.setAttribute('aria-label', lis ? 'Stop listening' : 'Listen'); fsListen.title = lis ? 'Stop listening' : 'Listen: hear the song with the cursor, then go back to your mode'; fsGo.hidden = lis;
   };
   [msg, goB].forEach(x => new MutationObserver(mirror).observe(x, { childList: true, characterData: true, subtree: true, attributes: true }));
   mirror();
