@@ -540,7 +540,15 @@ body{background-color:var(--bg);background-image:url("data:image/svg+xml,%3Csvg%
 @media (max-width:520px){.hgrid{grid-template-columns:1fr}}
 .seg button:disabled{opacity:.4;cursor:not-allowed}
 .sheet{position:relative}
-.peek{position:absolute;right:8px;top:8px;z-index:2}
+.sheet{padding-top:46px}
+.fs-bar{position:absolute;right:8px;top:8px;z-index:3;display:flex;gap:6px;align-items:center}
+.fs-bar #fs-msg,.fs-bar #fs-go,.fs-bar .fs-size{display:none}
+#sheet.fs .fs-bar .fs-size{display:inline-flex}
+body.sheet-fs{overflow:hidden}
+#sheet.fs{position:fixed;left:0;right:0;top:0;bottom:var(--dock-h);z-index:29;margin:0;border:0;border-radius:0;overflow:auto;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top,0px) + 58px) max(10px,env(safe-area-inset-right,0px)) 24px max(10px,env(safe-area-inset-left,0px))}
+#sheet.fs .fs-bar{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 8px) max(10px,env(safe-area-inset-right,0px)) 8px max(10px,env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--paper) 94%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#sheet.fs .fs-bar #fs-msg{display:block;flex:1;min-width:0;min-height:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sheet.fs .fs-bar #fs-go{display:inline-flex}
 .sheet.memory g.n:not(.cur) .lh-f,.sheet.memory g.n:not(.cur) .lh-o,.sheet.memory g.n:not(.cur) .lh-r,.sheet.memory g.n:not(.cur) .lh-i,.sheet.memory g.n:not(.cur) .hin,.sheet.memory g.n:not(.cur) .acc,.sheet.memory g.n:not(.cur) .fgr{opacity:.05}
 .countin{position:fixed;inset:auto;top:calc(env(safe-area-inset-top,0px) + 70px);right:max(14px,env(safe-area-inset-right));left:auto;z-index:35;min-width:88px;padding:6px 22px;border-radius:999px;font-size:clamp(2rem,8vw,3.4rem);text-align:center;background:color-mix(in srgb,var(--paper) 92%,transparent);border:2px solid var(--felt);box-shadow:0 8px 24px rgba(60,30,10,.25);white-space:nowrap}
 /* rating panel + big Next button, both above the keyboard dock */
@@ -760,7 +768,7 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
         <span class="mono small" id="tempo-val">100%</span>
         <label class="tog"><input type="checkbox" id="opt-auto" checked> Auto tempo</label>
       </div>
-      <div class="sheet" id="sheet"><button class="peek btn small" id="p-peek" hidden>Peek</button><svg id="sheet-svg" role="img" aria-label="Sheet music"></svg><div class="countin" id="countin" hidden></div></div>
+      <div class="sheet" id="sheet"><div class="fs-bar"><div class="msg" id="fs-msg" aria-hidden="true"></div><span class="seg fs-size" role="group" aria-label="Note size" id="fs-size"><button data-v="s" aria-pressed="false">S</button><button data-v="m" aria-pressed="false">M</button><button data-v="l" aria-pressed="false">L</button></span><button class="btn small primary" id="fs-go">▶ Start</button><button class="peek btn small" id="p-peek" hidden>Peek</button><button class="btn small" id="p-full" aria-pressed="false" title="Show the sheet on the whole screen">⛶ Full screen</button></div><svg id="sheet-svg" role="img" aria-label="Sheet music"></svg><div class="countin" id="countin" hidden></div></div>
       <details class="helpers" id="p-helpers">
         <summary>Helpers, left hand and sound</summary>
         <div class="hgrid">
@@ -3551,8 +3559,10 @@ function renderScore(S, o) {
   const grand = !!o.lh, lh = grand ? lhFor(S, o.lh) : null;
   const W = o.W || 360;
   const SZ = { s: [300, 560, 720], m: [235, 440, 580], l: [175, 330, 440] }[o.size || 'm'];
-  let budget = W < 560 ? SZ[0] : W < 900 ? SZ[1] : SZ[2];
-  const maxPer = W < 560 ? 2 : W < 900 ? 4 : 5;
+  /* full screen (o.wide): keep the chosen note size in pixels and fit more bars per line instead of blowing the notes up */
+  const wide = !!o.wide && W >= 900;
+  let budget = W < 560 ? SZ[0] : W < 900 ? SZ[1] : SZ[2] * (wide ? W / 900 : 1);
+  const maxPer = W < 560 ? 2 : W < 900 ? 4 : wide ? Math.max(5, Math.floor(5 * W / 900)) : 5;
   /* horizontal spacing per bar */
   const info = S.disp.map(b => {
     const on = new Map();
@@ -3805,7 +3815,7 @@ const Player = (() => {
   /* ----- drawing ----- */
   function render() {
     const W = sheet.clientWidth || 360;
-    lay = renderScore(st.song, { W, size: st.size, fingers: st.fingers, counts: st.counts, lh: grand() ? st.lh : null });
+    lay = renderScore(st.song, { W, wide: sheet.classList.contains('fs'), size: st.size, fingers: st.fingers, counts: st.counts, lh: grand() ? st.lh : null });
     svg.setAttribute('viewBox', `0 0 ${lay.VW} ${lay.VH}`); svg.innerHTML = lay.svg;
     els = new Map(); $$('[data-id]', svg).forEach(g => els.set(g.dataset.id, g));
     sheet.classList.toggle('memory', st.memory); peekB.hidden = !st.memory;
@@ -3830,7 +3840,9 @@ const Player = (() => {
     const Ln = lay.lines[L], nxt = lay.lines[L + 1] || Ln; if (!Ln) return;
     const r = svg.getBoundingClientRect(), sc = r.width / lay.VW;
     const yA = r.top + (Ln.yTop - 60) * sc, yB = r.top + (nxt.yBot + 30) * sc;
-    const navB = ($('.nav') || document.body).getBoundingClientRect().bottom + 6, bottom = window.innerHeight - (Kb.hidden ? 50 : Kb.dockH) - 8;
+    const bottom = window.innerHeight - (Kb.hidden ? 50 : Kb.dockH) - 8;
+    if (sheet.classList.contains('fs')) { const top = $('.fs-bar', sheet).getBoundingClientRect().bottom + 6; if (yA < top || yB > bottom) sheet.scrollBy({ top: yA - top, behavior: reduced() ? 'auto' : 'smooth' }); return; }
+    const navB = ($('.nav') || document.body).getBoundingClientRect().bottom + 6;
     if (yA < navB || yB > bottom) window.scrollBy({ top: yA - navB, behavior: reduced() ? 'auto' : 'smooth' });
   }
   /* ----- keys on the dock ----- */
@@ -4219,6 +4231,30 @@ const Player = (() => {
     const ms = g.dataset.m.split(' ').map(Number); Mode.stopAll(); Kb.ensure(ms); Kb.setHl(ms.map(m => ({ m, tone: 'felt' }))); ms.forEach(m => Audio.tap(m));
   });
   let rt = null, lastW = 0; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { const w = sheet.clientWidth; if (Math.abs(w - lastW) > 20 && !run) { lastW = w; render(); } }, 160); });
+  /* full screen sheet: the same sheet, just bigger; Step, Play along, keys and pedals keep working */
+  const fsB = $('#p-full'), fsGo = $('#fs-go'), fsMsg = $('#fs-msg');
+  function setFs(on) {
+    if (on === sheet.classList.contains('fs')) return;
+    sheet.classList.toggle('fs', on); document.body.classList.toggle('sheet-fs', on);
+    fsB.textContent = on ? '✕ Exit' : '⛶ Full screen'; fsB.setAttribute('aria-pressed', String(on)); fsB.title = on ? 'Back to the normal page (Esc)' : 'Show the sheet on the whole screen';
+    const d = document, el = d.documentElement;
+    try { if (on && el.requestFullscreen && !d.fullscreenElement) el.requestFullscreen().catch(() => {}); else if (!on && d.fullscreenElement) d.exitFullscreen().catch(() => {}); } catch (e) { /* iPhone: no browser full screen, the sheet still fills the page */ }
+    setTimeout(() => {
+      if (!run) { lastW = sheet.clientWidth; render(); sheet.scrollTop = 0; }
+      else if (lastLine >= 0) { const L = lastLine; lastLine = -1; keepVisible(L); lastLine = L; }
+      if (!on) { const B = lay && lay.bars[rangeBars(st.song, st.part, st.phrase)[0]]; if (B && !run) keepVisible(B.L); }
+    }, 80);
+  }
+  fsB.addEventListener('click', () => setFs(!sheet.classList.contains('fs')));
+  fsGo.addEventListener('click', () => { goB.click(); fsGo.blur(); });
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && sheet.classList.contains('fs')) setFs(false); });
+  const mirror = () => { fsMsg.textContent = msg.textContent; fsMsg.className = msg.className; fsGo.textContent = goB.textContent; fsGo.classList.toggle('stop', goB.classList.contains('stop')); };
+  [msg, goB].forEach(x => new MutationObserver(mirror).observe(x, { childList: true, characterData: true, subtree: true, attributes: true }));
+  mirror();
+  /* note size inside full screen: the same setting as Helpers → Note size */
+  $$('#fs-size button').forEach(b => b.addEventListener('click', () => { const t = $(`#h-size button[data-v="${b.dataset.v}"]`); if (t) t.click(); b.blur(); }));
+  const sizeMirror = () => $$('#fs-size button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.size)));
+  new MutationObserver(sizeMirror).observe($('#h-size'), { attributes: true, subtree: true }); sizeMirror();
 
   const P_ = {
     onNote(m) {
@@ -4243,6 +4279,7 @@ const Player = (() => {
       if (action === 'space') { if (run) stop(); else start(); return true; }
       if (action === 'next' || action === 'enter') { if (!run) { start(); return true; } }
       if (action === 'esc' && run) { stop(); return true; }
+      if (action === 'esc' && sheet.classList.contains('fs')) { setFs(false); return true; }
       return false;
     },
   };
@@ -4687,6 +4724,7 @@ const View = (() => {
   function go(v, keep) {
     if (!names.includes(v)) v = 'today';
     if (v !== cur) { if (Mode.cur && !(v === 'nigunim' && Mode.cur === Player)) Mode.stopAll(); }
+    if (v !== 'nigunim') { const fs = $('#sheet.fs'); if (fs) $('#p-full').click(); }
     cur = v;
     names.forEach(n => { const el = $('#v-' + n); if (el) el.hidden = n !== v; });
     $$('#nav-links a').forEach(a => a.classList.toggle('on', a.dataset.v === v));
