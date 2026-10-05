@@ -454,7 +454,7 @@ body{background-color:var(--bg);background-image:url("data:image/svg+xml,%3Csvg%
 .week{display:flex;gap:6px}
 .wd{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:600 .78rem var(--f-mono);background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
 .wd.ok{background:var(--brass);color:#FFF8EE;border-color:var(--brass)}
-.wd.today{outline:2px solid var(--felt);outline-offset:2px}
+.wd.is-today{outline:2px solid var(--felt);outline-offset:2px}
 .ifthen{display:block;line-height:2.2}
 .ifthen input{font:inherit;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);width:min(220px,60vw)}
 .shelf{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
@@ -5199,7 +5199,7 @@ const Today = (() => {
     if (L.song && songById(L.song)) { cont.hidden = false; cont.textContent = 'Continue: ' + songById(L.song).short + ', ' + rangeName(songById(L.song), L.part, L.phrase); } else cont.hidden = true;
     /* week */
     const wd = weekDays(), box = $('#t-week'); box.textContent = '';
-    ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach((d, i) => { const x = wd[i]; const el = h('span', 'wd' + (x.ok ? ' ok' : '') + (x.k === today() ? ' today' : ''), d); el.title = x.k + (x.d ? ': ' + Math.round(x.d.s / 60) + ' min, ' + (x.d.c || 0) + ' clean runs' : ''); box.append(el); });
+    ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach((d, i) => { const x = wd[i]; const el = h('span', 'wd' + (x.ok ? ' ok' : '') + (x.k === today() ? ' is-today' : ''), d); el.title = x.k + (x.d ? ': ' + Math.round(x.d.s / 60) + ' min, ' + (x.d.c || 0) + ' clean runs' : ''); box.append(el); });
     const okN = wd.filter(x => x.ok).length, wir = weeksInRow();
     $('#t-weektext').textContent = okN >= 5 ? 'Weekly goal met: ' + okN + ' of 5 days. ' + (wir > 1 ? wir + ' weeks in a row.' : '') : okN + ' of 5 days this week. A missed day is fine; a new week is a fresh start.' + (wir ? ' Goal met ' + wir + (wir === 1 ? ' week' : ' weeks') + ' in a row.' : '');
     const d = Store.s.day[today()] || { s: 0, c: 0 };
