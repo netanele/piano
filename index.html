@@ -2071,6 +2071,54 @@ const NIGUNIM = [
 "about": "Isaiah 55: “For you shall go out with joy and be led forth in peace.” A march (Tempo di marcia). The whole Sefer HaNigunim page: 12 bars.",
 "words": "כִּי בְשִׂמְחָה תֵצֵאוּ וּבְשָׁלוֹם תּוּבָלוּן, הֶהָרִים וְהַגְּבָעוֹת יִפְצְחוּ לִפְנֵיכֶם רִנָּה, וְכָל עֲצֵי הַשָּׂדֶה יִמְחֲאוּ כָף (ישעיהו נה, יב)",
 "partial": ""
+},
+{
+"id": "achlelokim",
+"t": "Ach Lelokim Domi Nafshi",
+"short": "Ach Lelokim",
+"he": "אך לאלקים דומי נפשי",
+"by": "Chabad (traditional)",
+"group": "ar",
+"attrib": "",
+"attribText": "A Chabad nigun, Sefer HaNigunim #100. The page you sent does not name a composer.",
+"credit": "Melody read from the Sefer HaNigunim page you sent (#100); chords by this page",
+"creditUrl": "",
+"key": "F minor",
+"time": 4,
+"tempo": 66,
+"pick": "",
+"sec": [
+{
+"id": "A",
+"lab": "A",
+"rep": 1,
+"n": "T3[ F4/8 C4/8 F4/8 ] Ab4/q Ab4/q T3[ Ab4/8 F4/8 Ab4/8 ] | C5/16 C5/8. Bb4/16 Bb4/8. Ab4/16 Ab4/8. G4/8 F4/8 | T3[ C5/8 Ab4/8 C5/8 ] Ab4/q Ab4/q Ab4/q | G4/8 Ab4/8 Bb4/16 Ab4/16 G4/16 Ab4/16 T3[ C5/8 C5/8 Ab4/8 ] G4/8 F4/8 | Ab4/8 G4/16 F4/16 C5/16 C5/8. F4/h",
+"c": "Fm | Fm C | Fm | C Fm | C Fm"
+},
+{
+"id": "B",
+"lab": "B",
+"n": "C5/8 C5/8 C5/8 C5/8 C5/8 Bb4/16 C5/16 Bb4/8 Ab4/8 | G4/8 Ab4/8 Bb4/8 C5/8 Bb4/16 Bb4/8 Ab4/16 Ab4/q | C5/8 F5/16 C5/16 C5/8 C5/8 Bb4/8 C5/8 Bb4/8 Ab4/8 | G4/8 Ab4/8 Bb4/8 C5/8 Bb4/16 Bb4/8 Ab4/16 Ab4/q | G4/8 Ab4/8 Bb4/8 Ab4/8 C5/16 C5/16 Ab4/8 G4/8 F4/8 | T3[ Bb4/8 Ab4/8 Bb4/8 ] Ab4/q Ab4/q Ab4/q | G4/8 Ab4/8 Bb4/8 Ab4/8 C5/16 C5/16 Ab4/8 G4/8 F4/8 | Ab4/8 G4/16 F4/16 C5/16 C5/8. F4/h",
+"c": "Fm Bbm | C Fm | Fm Bbm | C Fm | C Fm | Bbm Fm | C Fm | C Fm"
+}
+],
+"form": [
+"A",
+"A",
+"B"
+],
+"lev": 3,
+"warm": [
+"F4",
+"G4",
+"Ab4",
+"Bb4",
+"C5"
+],
+"warmName": "F minor: F G A♭ B♭ C",
+"about": "Psalm 62: “Only for God does my soul wait in silence; from Him is my hope.” Slow (Andante), in F minor: part A twice, then part B with the words. Grace notes are left out, and a few of the fast decorated beats are simplified.",
+"words": "אַךְ לֵאלֹהִים דּוֹמִי נַפְשִׁי, כִּי מִמֶּנּוּ תִּקְוָתִי. אַךְ הוּא צוּרִי וִישׁוּעָתִי, מִשְׂגַּבִּי לֹא אֶמּוֹט (תהלים סב, ו–ז)",
+"partial": ""
 }
 ];
 
@@ -2988,7 +3036,7 @@ function starsOf(S) {
 }
 const starHtml = (x, big) => `<span class="stars${big ? ' big' : ''}${x.gold ? ' gold' : ''}" aria-label="${x.n} of 3 stars${x.gold ? ', gold' : ''}">${'★'.repeat(x.n)}<i>${'★'.repeat(3 - x.n)}</i></span>`;
 
-const PARTIAL = { chamol: 'The complete nigun.', pitchu: 'The complete nigun: all six sections, 52 bars, with its 3/4 bars and triplets.', besht: 'Section A, the part the source sheet shows.', bavos: 'The first two of its five sections.', tzama: 'The first section only.', koldodi: 'The opening phrase only.', keili: 'The whole Sefer HaNigunim page (#3), in its original key.', vaharikoti: 'The whole Sefer HaNigunim page (#160).', kichilatzta: 'The whole one-page sheet.', avinu: 'The whole Sefer HaNigunim page (#6), without grace notes.', mesorosi: 'The whole Sefer HaNigunim page (#11), without grace notes or the Dal Segno return.', rikud: 'The whole Sefer HaNigunim page (#209), without grace notes.', bsimcha: 'The whole Sefer HaNigunim page (#159).' };
+const PARTIAL = { chamol: 'The complete nigun.', pitchu: 'The complete nigun: all six sections, 52 bars, with its 3/4 bars and triplets.', besht: 'Section A, the part the source sheet shows.', bavos: 'The first two of its five sections.', tzama: 'The first section only.', koldodi: 'The opening phrase only.', keili: 'The whole Sefer HaNigunim page (#3), in its original key.', vaharikoti: 'The whole Sefer HaNigunim page (#160).', kichilatzta: 'The whole one-page sheet.', avinu: 'The whole Sefer HaNigunim page (#6), without grace notes.', mesorosi: 'The whole Sefer HaNigunim page (#11), without grace notes or the Dal Segno return.', rikud: 'The whole Sefer HaNigunim page (#209), without grace notes.', bsimcha: 'The whole Sefer HaNigunim page (#159).', achlelokim: 'The whole Sefer HaNigunim page (#100), slightly simplified.' };
 const heb = t => t.replace(/([\u0590-\u05FF][\u0590-\u05FF\s:'"\u05F3\u05F4.-]*[\u0590-\u05FF])/g, '<bdi dir="rtl">$1</bdi>');
 /* ---------------- player ---------------- */
 const Player = (() => {
