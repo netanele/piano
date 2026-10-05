@@ -5346,7 +5346,7 @@ const MyUI = (() => {
 /* ---------------- Save: write everything to settings.js ---------------- */
 const Saver = (() => {
   const when = () => { const F = SetFile.file; return F && F.saved ? new Date(F.saved).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
-  let justSaved = '';
+  let justSaved = '', lastHandle = null;
   function text() {
     if (justSaved) return justSaved;
     if (SetFile.unsaved) return SetFile.migrated ? 'Your earlier progress was found in this browser. Press Save, put settings.js next to index.html, then commit and push.' : 'Unsaved changes. Press Save and commit settings.js, or they are gone when you close the page.';
@@ -5380,7 +5380,11 @@ window.STK_SETTINGS = ${JSON.stringify(o, null, 2)};
     const blob = new Blob([fileText()], { type: 'text/javascript' });
     let saved = false;
     if (window.showSaveFilePicker) {
-      try { const fh = await window.showSaveFilePicker({ suggestedName: 'settings.js', types: [{ description: 'Settings file', accept: { 'text/javascript': ['.js'] } }] }); const w = await fh.createWritable(); await w.write(blob); await w.close(); saved = true; }
+      /* id: the browser itself reopens the folder last used for this picker (your repo root after the first save);
+         startIn: within this visit, start right at the settings.js you saved last */
+      const opts = { id: 'stk-settings', suggestedName: 'settings.js', types: [{ description: 'Settings file', accept: { 'text/javascript': ['.js'] } }] };
+      if (lastHandle) opts.startIn = lastHandle;
+      try { const fh = await window.showSaveFilePicker(opts); lastHandle = fh; const w = await fh.createWritable(); await w.write(blob); await w.close(); saved = true; }
       catch (e) { if (e && e.name === 'AbortError') return; }
     }
     if (!saved) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'settings.js'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
