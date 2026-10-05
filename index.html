@@ -697,6 +697,10 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
 .cl-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--ink-2)}
 .cl-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 .cl-empty{color:var(--ink-2);font-size:.92rem}
+.save-btn{flex:none}
+.save-btn.unsaved{border-color:var(--felt);color:var(--felt)}
+.save-btn.unsaved::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--felt)}
+.sync.unsaved{color:var(--felt)}.sync.unsaved::before{background:var(--felt)}
 </style>
 
 <nav class="nav" aria-label="Sections">
@@ -710,6 +714,7 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
       <a href="#plan" data-v="plan">Plan</a>
       <a href="#learn" data-v="learn">Learn</a>
     </div>
+    <button class="btn small save-btn" type="button" data-save id="save-btn" title="Save everything to settings.js, then commit and push it">⤓ Save</button>
     <button class="btn small" id="fs-btn" aria-label="Full screen" hidden>⛶ Full screen</button>
   </div>
   <div class="sess" id="sess" hidden>
@@ -740,7 +745,7 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
     </div>
     <div class="stack">
       <div class="tool">
-        <div class="tool-head"><h3>This week</h3><span class="sync" id="sync">Saved in this browser</span></div>
+        <div class="tool-head"><h3>This week</h3><span class="sync" id="sync">From settings.js</span></div>
         <div class="week" id="t-week" aria-label="Practice days this week"></div>
         <p class="small muted" id="t-weektext"></p>
         <div class="stats">
@@ -884,7 +889,7 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
     <div class="cl-row"><span class="small muted">Show</span><span class="seg" id="cl-filter" role="group" aria-label="Show chords"><button data-v="used" aria-pressed="false">In my songs</button><button data-v="maj" aria-pressed="false">Major</button><button data-v="min" aria-pressed="false">Minor</button><button data-v="sev" aria-pressed="false">7th &amp; dim</button><button data-v="all" aria-pressed="false">All</button></span></div>
     <div class="cl-row"><span class="small muted">Set every chord to</span><span class="row"><button class="btn small" data-clall="0">Root position</button><button class="btn small" data-clall="1">1st inversion</button><button class="btn small" data-clall="2">2nd inversion</button></span></div>
     <div class="cl-legend"><span><i style="background:var(--hl-felt-b)"></i>the chord's letter (root)</span><span><i style="background:var(--hl-brass-b)"></i>the other two notes</span><span>Numbers: left-hand fingers, low to high</span></div>
-    <div class="cl-row"><button class="btn small primary" type="button" id="set-save">⤓ Save settings file</button><span class="small muted" id="set-status"></span></div>
+    <div class="cl-row"><button class="btn small primary" type="button" data-save>⤓ Save to settings.js</button><span class="small muted" id="set-status"></span></div>
     <p class="small muted" id="cl-note"></p>
   </div>
   <div class="cl-grid" id="cl-grid"></div>
@@ -1065,11 +1070,15 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
-/* settings that live in settings.js: [localStorage key, allowed values or 'bool', default] */
+/* ---------------- settings.js: the only place anything is kept ----------------
+   Nothing is stored in the browser. settings.js (next to index.html, committed to git) is read when the page opens;
+   changes live in memory while the page is open; "Save" writes a new settings.js to commit and push. */
+/* readable display settings in the file: [internal key, allowed values or 'bool', default] */
 const SETTINGS_MAP = {
   noteNames: ['stk.naming', ['letter', 'solf'], 'letter'],
   keyLabels: ['stk.labels', ['all', 'c', 'off'], 'all'],
+  youPlay: ['stk.hands', ['r', 'l', 'b'], 'r'],
+  leftHand: ['stk.lh2', ['off', 'app', 'root', 'fifth', 'triad', 'oompah', 'broken'], 'app'],
   keyGlow: ['stk.glow', ['on', 'stuck', 'off'], 'on'],
   fingers: ['stk.fingers', ['all', 'shift', 'off'], 'all'],
   noteSize: ['stk.size', ['s', 'm', 'l'], 'l'],
@@ -1079,28 +1088,42 @@ const SETTINGS_MAP = {
   chordFilter: ['stk.clf', ['used', 'maj', 'min', 'sev', 'all'], 'used'],
 };
 const SETTING_LS = Object.values(SETTINGS_MAP).map(x => x[0]);
-let setReady = false; /* after settings.js is applied, a changed setting means the file is out of date */
-const lsSet = (k, v) => { try { const ch = setReady && SETTING_LS.includes(k) && localStorage.getItem(k) !== String(v); localStorage.setItem(k, v); if (ch) localStorage.setItem('stk.setdirty', '1'); } catch (e) {} };
 const SHAPE_WORDS = ['root', '1st', '2nd'];
-/* settings.js: applied once each time its content changes (a new commit, or a hand edit). Changes made on the page after that
-   stay in this browser until you save a new settings.js and commit it. */
+const PROGRESS_KEY = 'stk.progress.v1';
 const SetFile = (() => {
   const raw = window.STK_SETTINGS && typeof window.STK_SETTINGS === 'object' ? window.STK_SETTINGS : null;
-  const sig = o => JSON.stringify({ c: o.chordShapes || {}, d: o.display || {} });
-  const F = raw && (raw.chordShapes || raw.display) ? raw : null;
-  let shapes = null;
-  if (F && sig(F) !== lsGet('stk.setfile')) {
+  const F = raw && (raw.chordShapes || raw.display || raw.progress) ? raw : null;
+  const mem = new Map(), subs = [];
+  let unsaved = false, seeding = true, migrated = false;
+  if (F) {
     const d = F.display || {};
     Object.keys(SETTINGS_MAP).forEach(k => {
       if (!(k in d)) return; const [ls, ok] = SETTINGS_MAP[k], v = d[k];
-      if (ok === 'bool') { if (typeof v === 'boolean') lsSet(ls, v ? '1' : '0'); } else if (ok.includes(v)) lsSet(ls, v);
+      if (ok === 'bool') { if (typeof v === 'boolean') mem.set(ls, v ? '1' : '0'); } else if (ok.includes(v)) mem.set(ls, v);
     });
-    shapes = F.chordShapes || {};
-    lsSet('stk.setfile', sig(F)); lsSet('stk.setdirty', '0');
+    if (F.progress && typeof F.progress === 'object') mem.set(PROGRESS_KEY, JSON.stringify(F.progress));
+    Object.entries(F.other || {}).forEach(([k, v]) => { if (typeof v === 'string' && /^stk\./.test(k)) mem.set(k, v); });
   }
-  setReady = true;
-  return { file: F, sig, takeShapes() { const x = shapes; shapes = null; return x; } };
+  if (!F || !F.progress) {
+    /* one time only: while settings.js has no progress yet, progress this browser kept from before is read (never written)
+       so you can Save it into settings.js. Settings already in the file win. */
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && /^stk\./.test(k) && !/^stk\.set/.test(k) && !mem.has(k) && !(F && SETTING_LS.includes(k))) { mem.set(k, localStorage.getItem(k)); migrated = true; } } } catch (e) {}
+  }
+  const emit = () => subs.forEach(f => { try { f(unsaved); } catch (e) {} });
+  return {
+    file: F, migrated, mem,
+    get: k => (mem.has(k) ? mem.get(k) : null),
+    set(k, v) { v = String(v); if (mem.get(k) === v) return; mem.set(k, v); if (!seeding && !unsaved) { unsaved = true; emit(); } },
+    shapes: F && F.chordShapes ? F.chordShapes : null,
+    /* after the page has finished opening, every change counts as unsaved */
+    ready() { seeding = false; if (migrated) { unsaved = true; emit(); } },
+    clean() { unsaved = false; emit(); },
+    get unsaved() { return unsaved; },
+    onChange: f => subs.push(f),
+  };
 })();
+const lsGet = k => SetFile.get(k);
+const lsSet = (k, v) => SetFile.set(k, v);
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const dkey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1428,9 +1451,9 @@ const Inv = (() => {
   const map = () => (Store.s.inv && Store.s.inv.v) || {};
   function of(c) { if (!c) return null; const x = map()[key(c)]; return x === 1 || x === 2 ? x : 0; }
   function check() { const j = JSON.stringify(map()); if (j !== last) { last = j; ver++; return true; } return false; }
-  function set(list) { Store.change(x => { const v = Object.assign({}, (x.inv && x.inv.v) || {}); list.forEach(([k, i]) => { if (i) v[k] = i; else delete v[k]; }); x.inv = { t: Date.now(), v }; }); lsSet('stk.setdirty', '1'); check(); }
+  function set(list) { Store.change(x => { const v = Object.assign({}, (x.inv && x.inv.v) || {}); list.forEach(([k, i]) => { if (i) v[k] = i; else delete v[k]; }); x.inv = { t: Date.now(), v }; }); check(); }
   /* chord shapes from settings.js: "Dm": "1st". Chords not listed there play in root position. */
-  const fromFile = SetFile.takeShapes();
+  const fromFile = SetFile.shapes;
   if (fromFile) {
     const v = {};
     Object.keys(fromFile).forEach(n => { const c = chordInfo(n), i = SHAPE_WORDS.indexOf(String(fromFile[n]).toLowerCase()); if (c && i > 0) v[key(c)] = i; });
@@ -5015,40 +5038,10 @@ const ChordLib = (() => {
     if (!confirm('Use the ' + SHAPE[i].toLowerCase() + ' for every chord? Your single choices are replaced.')) return;
     Inv.set(LIB.map(e => [e.key, i])); refresh(); changed();
   }));
-  /* ---- settings.js: write the current settings ---- */
   const setStatus = $('#set-status');
-  function status() {
-    const F = SetFile.file, when = F && F.saved ? new Date(F.saved).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-    const dirty = lsGet('stk.setdirty') === '1';
-    if (!F) setStatus.textContent = 'No saved settings.js yet. Save one into the site folder (next to index.html), then commit and push it.';
-    else if (dirty) setStatus.textContent = 'You changed settings since settings.js' + (when ? ' (' + when + ')' : '') + '. Save a new file and commit it to keep them on every device.';
-    else setStatus.textContent = 'Using settings.js' + (when ? ', saved ' + when : '') + '. Same settings on every device.';
-  }
-  function fileText() {
-    const display = {};
-    Object.keys(SETTINGS_MAP).forEach(k => { const [ls, ok, def] = SETTINGS_MAP[k], v = lsGet(ls); display[k] = ok === 'bool' ? (v == null ? def : v === '1') : (v != null && ok.includes(v) ? v : def); });
-    const chordShapes = {}; addMissing(); LIB.forEach(e => { chordShapes[e.name] = SHAPE_WORDS[Inv.of(e.c) || 0]; });
-    const o = { saved: new Date().toISOString(), chordShapes, display };
-    return { o, text: `/* Staff to Keys settings. The page reads this file every time it opens, on any browser and device.
-   Change it on the Chords page ("Save settings file") or edit the values here, then commit and push.
-   chordShapes: "root" = root position, "1st" = 1st inversion, "2nd" = 2nd inversion.
-   display: noteNames letter|solf · keyLabels all|c|off · keyGlow on|stuck|off · fingers all|shift|off ·
-   noteSize s|m|l · counting, autoTempo, loop true|false · chordFilter used|maj|min|sev|all */
-window.STK_SETTINGS = ${JSON.stringify(o, null, 2)};
-` };
-  }
-  $('#set-save').addEventListener('click', async () => {
-    const { o, text } = fileText(), blob = new Blob([text], { type: 'text/javascript' });
-    let saved = false;
-    if (window.showSaveFilePicker) {
-      try { const fh = await window.showSaveFilePicker({ suggestedName: 'settings.js', types: [{ description: 'Settings file', accept: { 'text/javascript': ['.js'] } }] }); const w = await fh.createWritable(); await w.write(blob); await w.close(); saved = true; }
-      catch (e) { if (e && e.name === 'AbortError') return; }
-    }
-    if (!saved) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'settings.js'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
-    lsSet('stk.setfile', SetFile.sig(o)); lsSet('stk.setdirty', '0');
-    setStatus.textContent = (saved ? 'Saved settings.js.' : 'Downloaded settings.js.') + ' Put it next to index.html (replace the old one), then commit and push. Every device then opens with these settings.';
-  });
-  return { render, refresh, changed };
+  function status() { setStatus.textContent = Saver.text(); }
+  const shapes = () => { addMissing(); const o = {}; LIB.forEach(e => { o[e.name] = SHAPE_WORDS[Inv.of(e.c) || 0]; }); return o; };
+  return { render, refresh, changed, shapes, status };
 })();
 
 /* ---------------- views ---------------- */
@@ -5350,10 +5343,58 @@ const MyUI = (() => {
   });
   return { open };
 })();
-Store.on((s, synced) => {
+/* ---------------- Save: write everything to settings.js ---------------- */
+const Saver = (() => {
+  const when = () => { const F = SetFile.file; return F && F.saved ? new Date(F.saved).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
+  let justSaved = '';
+  function text() {
+    if (justSaved) return justSaved;
+    if (SetFile.unsaved) return SetFile.migrated ? 'Your earlier progress was found in this browser. Press Save, put settings.js next to index.html, then commit and push.' : 'Unsaved changes. Press Save and commit settings.js, or they are gone when you close the page.';
+    if (!SetFile.file) return 'settings.js is empty. Press Save, put the file next to index.html, then commit and push.';
+    return 'Everything comes from settings.js' + (when() ? ', saved ' + when() : '') + '.';
+  }
+  function paint() {
+    $$('[data-save]').forEach(b => b.classList.toggle('unsaved', SetFile.unsaved));
+    const sy = $('#sync'); sy.textContent = SetFile.unsaved ? 'Not saved yet' : 'From settings.js'; sy.classList.toggle('unsaved', SetFile.unsaved); sy.classList.toggle('on', !SetFile.unsaved && !!SetFile.file);
+    if (View.cur === 'chords') ChordLib.status();
+  }
+  SetFile.onChange(() => { justSaved = ''; paint(); });
+  function fileText() {
+    const display = {};
+    Object.keys(SETTINGS_MAP).forEach(k => { const [ls, ok, def] = SETTINGS_MAP[k], v = lsGet(ls); display[k] = ok === 'bool' ? (v == null ? def : v === '1') : (v != null && ok.includes(v) ? v : def); });
+    const progress = JSON.parse(JSON.stringify(Store.s)); delete progress.inv;
+    const other = {}; SetFile.mem.forEach((v, k) => { if (k !== PROGRESS_KEY && !SETTING_LS.includes(k)) other[k] = v; });
+    const o = { saved: new Date().toISOString(), chordShapes: ChordLib.shapes(), display, other, progress };
+    return `/* Staff to Keys: everything the page remembers. Nothing is kept in the browser.
+   The page reads this file every time it opens, on any browser and device. Press "Save" on the page,
+   replace this file with the saved one, then commit and push.
+   chordShapes: "root" = root position, "1st" = 1st inversion, "2nd" = 2nd inversion.
+   display: noteNames letter|solf · keyLabels all|c|off · youPlay r|l|b (right, left, both) ·
+   leftHand off|app|root|fifth|triad|oompah|broken · keyGlow on|stuck|off · fingers all|shift|off ·
+   noteSize s|m|l · counting, autoTempo, loop true|false · chordFilter used|maj|min|sev|all
+   other: last song, tempos and similar. progress: practice days, stars, plan ticks, your added songs. */
+window.STK_SETTINGS = ${JSON.stringify(o, null, 2)};
+`;
+  }
+  async function save() {
+    const blob = new Blob([fileText()], { type: 'text/javascript' });
+    let saved = false;
+    if (window.showSaveFilePicker) {
+      try { const fh = await window.showSaveFilePicker({ suggestedName: 'settings.js', types: [{ description: 'Settings file', accept: { 'text/javascript': ['.js'] } }] }); const w = await fh.createWritable(); await w.write(blob); await w.close(); saved = true; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    if (!saved) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'settings.js'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+    SetFile.clean();
+    justSaved = (saved ? 'Saved settings.js.' : 'Downloaded settings.js.') + ' Put it next to index.html (replace the old one), then commit and push.';
+    paint();
+  }
+  document.addEventListener('click', e => { const b = e.target.closest ? e.target.closest('[data-save]') : null; if (b) { e.preventDefault(); save(); } });
+  window.addEventListener('beforeunload', e => { if (SetFile.unsaved) { e.preventDefault(); e.returnValue = ''; } });
+  return { text, paint, save };
+})();
+Store.on(() => {
   MySongs.sync();
   if (Inv.check()) ChordLib.changed();
-  const sy = $('#sync'); sy.textContent = synced ? 'Synced to your account' : 'Saved in this browser'; sy.classList.toggle('on', !!synced);
   if (View.cur === 'today') Today.render();
   if (View.cur === 'nigunim' && !Player.busy) Player.renderSide();
 });
@@ -5362,8 +5403,9 @@ if (!Store.s.start) Store.change(x => { x.start = today(); }, true);
 setNaming(naming);
 (() => { const L = Store.s.last || {}; Player.select(L.song && songById(L.song) ? L.song : 'chamol'); })();
 View.go(location.hash.slice(1) || 'today', true);
-window.__stk = { SONGS, Player, Store, Kb, Drill, runSpec, Sess, Today, View, Mode, Inv, ChordLib };
-Store.connect();
+window.__stk = { SONGS, Player, Store, Kb, Drill, runSpec, Sess, Today, View, Mode, Inv, ChordLib, SetFile, Saver };
+/* opening the page is not a change: from here on, every change is unsaved until you Save */
+SetFile.ready(); Saver.paint();
 /* sound: wake the audio engine on every gesture; if the browser keeps it off, show a "Turn sound on" button */
 (() => {
   const btn = $('#kb-snd'); let chk = null;
