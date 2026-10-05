@@ -4295,6 +4295,14 @@ const Player = (() => {
     }, 80);
   }
   fsB.addEventListener('click', () => setFs(!sheet.classList.contains('fs')));
+  /* tap an empty spot on the sheet: full screen on / off (notes, chord letters and buttons keep their own taps) */
+  sheet.addEventListener('click', e => {
+    if (e.target.closest('button, a, input, select, label, .fs-bar, text.chd, g.n')) return;
+    if (String(window.getSelection && window.getSelection()) !== '') return;
+    const x = e.clientX, y = e.clientY, pad = 14;
+    for (const n of $$('g.n, text.chd', svg)) { const r = n.getBoundingClientRect(); if (x > r.left - pad && x < r.right + pad && y > r.top - pad && y < r.bottom + pad) return; }
+    setFs(!sheet.classList.contains('fs'));
+  });
   fsGo.addEventListener('click', () => { goB.click(); fsGo.blur(); });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && sheet.classList.contains('fs')) setFs(false); });
   /* Listen in full screen: plays the song with the cursor, then returns to the mode you were in (e.g. Step) */
