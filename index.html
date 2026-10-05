@@ -4249,7 +4249,11 @@ const Player = (() => {
   segWire('h-glow', 'glow', 'stk.glow');
   segWire('h-fingers', 'fingers', 'stk.fingers', render);
   segWire('h-echo', 'echo', null);
-  segWire('h-size', 'size', 'stk.size', render);
+  /* note size: redraw the sheet without stopping what is playing */
+  $$('#h-size button').forEach(b => b.addEventListener('click', () => {
+    if (b.disabled) return; b.blur(); st.size = b.dataset.v; lsSet('stk.size', st.size); renderHelpers(); render();
+    if (run && run.kind === 'step') { const mo = run.mos[run.i]; if (mo) { cursorAt(mo.ids, mo.bi); nextAt(run.mos[run.i + 1] ? run.mos[run.i + 1].ids : []); } }
+  }));
   $('#opt-counts').addEventListener('change', e => { st.counts = e.target.checked; lsSet('stk.counts', st.counts ? '1' : '0'); render(); });
   $('#opt-memory').addEventListener('change', e => { st.memory = e.target.checked; render(); });
   $('#opt-guide').addEventListener('change', e => { st.guide = e.target.checked; });
