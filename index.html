@@ -542,7 +542,8 @@ body{background-color:var(--bg);background-image:url("data:image/svg+xml,%3Csvg%
 .sheet{position:relative}
 .sheet{padding-top:46px}
 .fs-bar{position:absolute;right:8px;top:8px;z-index:3;display:flex;gap:6px;align-items:center}
-.fs-bar #fs-msg,.fs-bar #fs-go,.fs-bar .fs-size{display:none}
+.fs-bar #fs-msg,.fs-bar #fs-go,.fs-bar #fs-listen,.fs-bar .fs-size{display:none}
+#sheet.fs .fs-bar #fs-listen{display:inline-flex}
 #sheet.fs .fs-bar .fs-size{display:inline-flex}
 body.sheet-fs{overflow:hidden}
 #sheet.fs{position:fixed;left:0;right:0;top:0;bottom:var(--dock-h);z-index:29;margin:0;border:0;border-radius:0;overflow:auto;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top,0px) + 58px) max(10px,env(safe-area-inset-right,0px)) 24px max(10px,env(safe-area-inset-left,0px))}
@@ -768,7 +769,7 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
         <span class="mono small" id="tempo-val">100%</span>
         <label class="tog"><input type="checkbox" id="opt-auto" checked> Auto tempo</label>
       </div>
-      <div class="sheet" id="sheet"><div class="fs-bar"><div class="msg" id="fs-msg" aria-hidden="true"></div><span class="seg fs-size" role="group" aria-label="Note size" id="fs-size"><button data-v="s" aria-pressed="false">S</button><button data-v="m" aria-pressed="false">M</button><button data-v="l" aria-pressed="false">L</button></span><button class="btn small primary" id="fs-go">▶ Start</button><button class="peek btn small" id="p-peek" hidden>Peek</button><button class="btn small" id="p-full" aria-pressed="false" title="Show the sheet on the whole screen">⛶ Full screen</button></div><svg id="sheet-svg" role="img" aria-label="Sheet music"></svg><div class="countin" id="countin" hidden></div></div>
+      <div class="sheet" id="sheet"><div class="fs-bar"><div class="msg" id="fs-msg" aria-hidden="true"></div><span class="seg fs-size" role="group" aria-label="Note size" id="fs-size"><button data-v="s" aria-pressed="false">S</button><button data-v="m" aria-pressed="false">M</button><button data-v="l" aria-pressed="false">L</button></span><button class="btn small" id="fs-listen" title="Hear the song with the cursor, then go back to your mode">🔊 Listen</button><button class="btn small primary" id="fs-go">▶ Start</button><button class="peek btn small" id="p-peek" hidden>Peek</button><button class="btn small" id="p-full" aria-pressed="false" title="Show the sheet on the whole screen">⛶ Full screen</button></div><svg id="sheet-svg" role="img" aria-label="Sheet music"></svg><div class="countin" id="countin" hidden></div></div>
       <details class="helpers" id="p-helpers">
         <summary>Helpers, left hand and sound</summary>
         <div class="hgrid">
@@ -4248,7 +4249,19 @@ const Player = (() => {
   fsB.addEventListener('click', () => setFs(!sheet.classList.contains('fs')));
   fsGo.addEventListener('click', () => { goB.click(); fsGo.blur(); });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && sheet.classList.contains('fs')) setFs(false); });
-  const mirror = () => { fsMsg.textContent = msg.textContent; fsMsg.className = msg.className; fsGo.textContent = goB.textContent; fsGo.classList.toggle('stop', goB.classList.contains('stop')); };
+  /* Listen in full screen: plays the song with the cursor, then returns to the mode you were in (e.g. Step) */
+  const fsListen = $('#fs-listen'); let backMode = null;
+  fsListen.addEventListener('click', () => {
+    fsListen.blur();
+    if (run && run.kind === 'listen') { stop(); return; }
+    if (st.mode !== 'listen') backMode = st.mode;
+    if (run) stop(true); hideRate(); st.mode = 'listen'; renderModes(); start();
+  });
+  const mirror = () => {
+    if (!run && backMode) { if (st.mode === 'listen') { st.mode = backMode; renderModes(); } backMode = null; }
+    fsMsg.textContent = msg.textContent; fsMsg.className = msg.className; fsGo.textContent = goB.textContent; fsGo.classList.toggle('stop', goB.classList.contains('stop'));
+    const lis = !!run && run.kind === 'listen'; fsListen.textContent = lis ? '■ Stop listening' : '🔊 Listen'; fsGo.hidden = lis;
+  };
   [msg, goB].forEach(x => new MutationObserver(mirror).observe(x, { childList: true, characterData: true, subtree: true, attributes: true }));
   mirror();
   /* note size inside full screen: the same setting as Helpers → Note size */
