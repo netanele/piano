@@ -599,6 +599,8 @@ g.n.cur .ring{stroke:var(--felt);stroke-width:2.4;stroke-dasharray:none}
 .btint{fill:var(--brass-soft);opacity:.55}
 .cursor{fill:var(--felt-soft);opacity:.85}
 .chd{fill:var(--ink);font:700 11.5px var(--f-head)}
+#sheet-svg .chd[data-ch]{cursor:pointer}
+#sheet-svg .chd.on{fill:var(--felt)}
 g.n.r-ok .ring{stroke:var(--ok);stroke-width:2.4;stroke-dasharray:none}
 g.n.r-near .ring{stroke:#C9A64A;stroke-width:2.4;stroke-dasharray:none}
 g.n.r-miss .ring{stroke:var(--felt);stroke-width:2.4;stroke-dasharray:none}
@@ -3691,7 +3693,7 @@ function renderScore(S, o) {
       }
       /* bar content */
       let g = `<g class="bar" data-b="${bi}">`;
-      b.chordList.forEach(c => { g += `<text class="chd" data-cid="${c.id}" x="${X(c.beat)}" y="${top + chordY}" text-anchor="middle">${esc(chordLabel(c.name))}</text>`; });
+      b.chordList.forEach(c => { g += `<text class="chd" data-cid="${c.id}" data-ch="${esc(c.name)}" x="${X(c.beat)}" y="${top + chordY}" text-anchor="middle">${esc(chordLabel(c.name))}</text>`; });
       /* beam groups: notes shorter than a beat that start and end inside the same beat */
       const ns = b.notes, groups = []; let gr = null;
       ns.forEach((n, i) => {
@@ -4151,17 +4153,19 @@ const Player = (() => {
     ];
     void np; return R;
   }
+  let pickedRung = null, stayPut = false; /* the step card you tapped last (per song) gets the red outline */
   function renderRungs() {
-    const S = st.song, box = $('#p-rungs'); box.textContent = '';
+    const S = st.song, box = $('#p-rungs'), oldList = $('.rung-list', box), keepX = oldList ? oldList.scrollLeft : 0; box.textContent = '';
     if (!isLib()) { box.hidden = true; return; } box.hidden = false;
     const R = rungs(S), next = R.findIndex(r => !r.done);
     const head = h('div', 'rungs-head');
     head.append(h('b', null, 'Learn this nigun'), h('span', 'small muted', R.filter(r => r.done).length + ' of ' + R.length + ' steps'));
-    if (next >= 0) { const b = h('button', 'btn small primary', 'Next step: ' + R[next].t + ' ›'); b.addEventListener('click', () => R[next].go()); head.append(b); }
+    const sel = pickedRung && pickedRung.id === S.id ? pickedRung.i : next;
+    if (next >= 0) { const b = h('button', 'btn small primary', 'Next step: ' + R[next].t + ' ›'); b.addEventListener('click', () => { pickedRung = { id: S.id, i: next }; $$('.rung', box).forEach((x, j) => x.classList.toggle('now', j === next)); stayPut = true; R[next].go(); }); head.append(b); }
     box.append(head);
     const ol = h('ol', 'rung-list');
-    R.forEach((r, i) => { const li = h('li', 'rung' + (r.done ? ' done' : '') + (i === next ? ' now' : '')); const b = h('button'); b.type = 'button'; b.append(h('b', null, r.t), h('span', null, r.h)); b.addEventListener('click', r.go); li.append(b); ol.append(li); });
-    box.append(ol);
+    R.forEach((r, i) => { const li = h('li', 'rung' + (r.done ? ' done' : '') + (i === sel ? ' now' : '')); const b = h('button'); b.type = 'button'; b.setAttribute('aria-current', String(i === sel)); b.append(h('b', null, r.t), h('span', null, r.h)); b.addEventListener('click', () => { pickedRung = { id: S.id, i }; $$('.rung', ol).forEach((x, j) => { x.classList.toggle('now', j === i); $('button', x).setAttribute('aria-current', String(j === i)); }); stayPut = true; r.go(); }); li.append(b); ol.append(li); });
+    box.append(ol); ol.scrollLeft = keepX;
   }
   function renderLib() {
     const box = $('#lib'); box.textContent = '';
@@ -4217,6 +4221,7 @@ const Player = (() => {
     say(o.note || ('Ready: ' + rangeName(st.song, st.part, st.phrase) + '. Press Start.'));
     saveLast();
     if (window.View) View.go('nigunim', true);
+    if (stayPut) { stayPut = false; return; } /* tapped a step card on this page: keep the page where it is */
     requestAnimationFrame(() => { const top = $('#player').getBoundingClientRect().top + window.scrollY - (($('.nav') || document.body).getBoundingClientRect().height + 8); window.scrollTo({ top, behavior: 'auto' }); });
   }
 
@@ -4245,6 +4250,14 @@ const Player = (() => {
   $('#opt-auto').addEventListener('change', e => { st.auto = e.target.checked; lsSet('stk.auto', st.auto ? '1' : '0'); });
   peekB.addEventListener('click', () => { sheet.classList.remove('memory'); setTimeout(() => sheet.classList.toggle('memory', st.memory), 2000); });
   svg.addEventListener('click', e => {
+    /* tap a chord letter above the staff: hear the chord (like the chord buttons in Learn) */
+    const ct = e.target.closest('text.chd[data-ch]');
+    if (ct) {
+      if (run) return; const v = lhVoicing(ct.dataset.ch, 'triad', null); if (!v || !v.length) return;
+      const cms = v.map(x => x.p.m); Mode.stopAll(); Kb.ensure(cms); Kb.setHl(v.map(x => ({ m: x.p.m, tone: 'brass', finger: x.f }))); Seq.run([{ t: 0, dur: 1.3, notes: cms, vel: 0.6 }]);
+      $$('.chd.on', svg).forEach(t => t.classList.remove('on')); ct.classList.add('on'); setTimeout(() => ct.classList.remove('on'), 900);
+      return;
+    }
     const g = e.target.closest('g.n[data-m]'); if (!g || run) return;
     const ms = g.dataset.m.split(' ').map(Number); Mode.stopAll(); Kb.ensure(ms); Kb.setHl(ms.map(m => ({ m, tone: 'felt' }))); ms.forEach(m => Audio.tap(m));
   });
