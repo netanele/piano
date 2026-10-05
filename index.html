@@ -663,6 +663,40 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
 @keyframes sndpulse{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--felt) 35%,transparent)}}
 
 .midi-pill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dock-h) + 12px);z-index:50;max-width:min(560px,calc(100vw - 24px));padding:10px 16px;border-radius:14px;background:var(--surface);border:2px solid var(--felt);color:var(--ink);font:600 .88rem/1.35 var(--f-head);box-shadow:0 10px 30px rgba(40,25,10,.28);text-align:center}.midi-pill.ok{border-color:var(--ok)}
+
+/* chord library */
+.cl-bar{gap:10px}
+.cl-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.cl-grid{display:grid;gap:14px;margin-top:16px;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}
+.cl-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:10px;min-width:0}
+.cl-head{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap}
+.cl-name{font:600 1.7rem/1 var(--f-display)}
+.cl-alias{font:500 .8rem var(--f-mono);color:var(--ink-2)}
+.cl-tones{font:600 .82rem var(--f-mono);color:var(--brass)}
+.cl-hear{margin-left:auto}
+.cl-use{font-size:.78rem;color:var(--ink-2);margin:0}
+.cl-use b{color:var(--ink);font-weight:600}
+.cl-shapes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.shape{border:1.5px solid var(--line);border-radius:12px;display:grid;background:var(--surface);overflow:hidden;transition:border-color .15s,background .15s;min-width:0}
+.shape.sel{border-color:var(--felt);background:var(--felt-soft)}
+.shape-play{border:0;background:transparent;padding:8px 8px 6px;display:grid;gap:4px;cursor:pointer;text-align:left;color:var(--ink);font:inherit;min-width:0}
+.shape-play:focus-visible{outline:2px solid var(--felt);outline-offset:-3px;border-radius:10px}
+.shape.playing .shape-play{background:color-mix(in srgb,var(--brass) 16%,transparent)}
+.shape-name{font:600 .8rem/1.15 var(--f-body)}
+.shape-notes{font:600 .78rem var(--f-mono);color:var(--ink)}
+.shape-f{font:500 .68rem var(--f-mono);color:var(--ink-2)}
+.use{display:flex;align-items:center;gap:6px;padding:8px;border-top:1px solid var(--line);font:600 .8rem var(--f-body);cursor:pointer;color:var(--ink-2)}
+.shape.sel .use{color:var(--felt);border-top-color:color-mix(in srgb,var(--felt) 30%,transparent)}
+.use input{width:18px;height:18px;accent-color:var(--felt);margin:0;flex:none}
+.mk{width:100%;height:auto;display:block}
+.mk .w{fill:var(--ivory);stroke:var(--ivory-edge);stroke-width:.6}
+.mk .b{fill:var(--key-black)}
+.mk .d{fill:var(--hl-brass-b)}
+.mk .r{fill:var(--hl-felt-b)}
+.mk .bk{stroke:var(--ivory);stroke-width:.8}
+.cl-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--ink-2)}
+.cl-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.cl-empty{color:var(--ink-2);font-size:.92rem}
 </style>
 
 <nav class="nav" aria-label="Sections">
@@ -672,6 +706,7 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
       <a href="#today" data-v="today">Today</a>
       <a href="#nigunim" data-v="nigunim">Nigunim</a>
       <a href="#drills" data-v="drills">Drills</a>
+      <a href="#chords" data-v="chords">Chords</a>
       <a href="#plan" data-v="plan">Plan</a>
       <a href="#learn" data-v="learn">Learn</a>
     </div>
@@ -838,6 +873,23 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
   </div>
 </section>
 
+<!-- ============ CHORDS ============ -->
+<section class="view wide" id="v-chords" data-view="chords" hidden>
+  <div class="sec-head">
+    <div class="eyebrow">Chord library</div>
+    <h2>One shape for every chord</h2>
+    <p>Every major and minor chord, plus the seventh and diminished chords of your songs (A7, C7, D7, E7, G7, E dim), in its three shapes: root position, 1st inversion and 2nd inversion. Tap a shape to hear it and see it on the keyboard below. Tick <b>Use</b> on the shape you want: from then on the whole page plays that shape for that chord, in Listen, Step and Play along, the left-hand helpers (Chord, Oom-pah, Broken), Chord Finder and the Learn examples.</p>
+  </div>
+  <div class="tool cl-bar">
+    <div class="cl-row"><span class="small muted">Show</span><span class="seg" id="cl-filter" role="group" aria-label="Show chords"><button data-v="used" aria-pressed="false">In my songs</button><button data-v="maj" aria-pressed="false">Major</button><button data-v="min" aria-pressed="false">Minor</button><button data-v="sev" aria-pressed="false">7th &amp; dim</button><button data-v="all" aria-pressed="false">All</button></span></div>
+    <div class="cl-row"><span class="small muted">Set every chord to</span><span class="row"><button class="btn small" data-clall="0">Root position</button><button class="btn small" data-clall="1">1st inversion</button><button class="btn small" data-clall="2">2nd inversion</button></span></div>
+    <div class="cl-legend"><span><i style="background:var(--hl-felt-b)"></i>the chord's letter (root)</span><span><i style="background:var(--hl-brass-b)"></i>the other two notes</span><span>Numbers: left-hand fingers, low to high</span></div>
+    <div class="cl-row"><button class="btn small primary" type="button" id="set-save">⤓ Save settings file</button><span class="small muted" id="set-status"></span></div>
+    <p class="small muted" id="cl-note"></p>
+  </div>
+  <div class="cl-grid" id="cl-grid"></div>
+</section>
+
 <!-- ============ PLAN ============ -->
 <section class="view wrap" id="v-plan" data-view="plan" hidden>
   <div class="sec-head">
@@ -921,7 +973,7 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
       <div class="row"><button class="btn small" data-prog="A Am">A, then Am</button><button class="btn small" data-prog="D Dm">D, then Dm</button><button class="btn small" data-prog="E Em">E, then Em</button></div>
       <p><b>Seventh chords</b> add one more note, two keys below the next root: <b>A7</b> = A C♯ E G. They lead strongly back home (A7 → Dm, E7 → Am). The left hand plays root, third and seventh and leaves out the fifth.</p>
       <div class="row"><button class="btn small" data-prog="A7 Dm">A7 → Dm</button><button class="btn small" data-prog="E7 Am">E7 → Am</button></div>
-      <p><b>Same notes, different order.</b> D–F–A can also be played F–A–D or A–D–F (inversions). Choose the shape closest to the last chord, so the hand barely moves. That is what “Chord” does in the player.</p>
+      <p><b>Same notes, different order.</b> D–F–A can also be played F–A–D or A–D–F (inversions). In the <a href="#chords">Chord library</a> you tick the shape you want for each chord; the player, the drills and the examples on this page then always play that shape.</p>
       <div class="figure"><svg id="fig7b" viewBox="0 0 340 112" role="img" aria-label="D minor in root position, first inversion and second inversion"></svg></div>
       <div class="row"><button class="btn small" data-demo="fig7b">Play the three shapes</button></div>
       <p><b>The chords of your nigunim.</b> Most of them go home and away and home again. Play each one slowly, saying the names out loud:</p>
@@ -931,12 +983,12 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
         <li><b>App plays:</b> you play the melody and hear the chords.</li>
         <li><b>Root:</b> one low note, the chord's letter. Say the chord names aloud.</li>
         <li><b>Root + 5th:</b> add the note five white keys up (pinky and thumb).</li>
-        <li><b>Chord:</b> three notes, in the shape closest to the last chord.</li>
+        <li><b>Chord:</b> three notes, in the shape you ticked in the <a href="#chords">Chord library</a>.</li>
         <li><b>Oom-pah:</b> a low root on the strong beat, the chord on the others. Lively nigunim love it.</li>
         <li><b>Broken:</b> the chord notes one at a time (low, middle, high, middle). Good for slow, singing nigunim.</li>
       </ol>
       <div class="row"><button class="btn small" data-pat="oompah:Am">Hear oom-pah on Am</button><button class="btn small" data-pat="broken:Am">Hear broken Am</button><button class="btn small primary" data-go="d:chords:C1">Practise: Chord Finder</button></div>
-      <p class="small muted">Every chord in the nigunim. Tap one to hear it and see its keys and fingers:</p>
+      <p class="small muted">Every chord in the nigunim, in the shape you chose in the <a href="#chords">Chord library</a>. Tap one to hear it and see its keys and fingers:</p>
       <div class="chordbtns" id="chordbtns"></div>
     </li>
     <li id="l-map">
@@ -1004,6 +1056,8 @@ g.n.lhn.cur .lh-f{stroke:var(--felt);stroke-width:3}
     <div class="kb" id="kb"><div id="kb-keys"></div></div>
   </div>
 </div>
+<script>/* settings.js sits next to this page and is committed to git, so every browser and device opens with the same settings */
+document.write('<script src="settings.js?v=' + Date.now() + '"><\/script>');</script>
 <script>
 (() => {
 'use strict';
@@ -1012,7 +1066,41 @@ const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
-const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+/* settings that live in settings.js: [localStorage key, allowed values or 'bool', default] */
+const SETTINGS_MAP = {
+  noteNames: ['stk.naming', ['letter', 'solf'], 'letter'],
+  keyLabels: ['stk.labels', ['all', 'c', 'off'], 'all'],
+  keyGlow: ['stk.glow', ['on', 'stuck', 'off'], 'on'],
+  fingers: ['stk.fingers', ['all', 'shift', 'off'], 'all'],
+  noteSize: ['stk.size', ['s', 'm', 'l'], 'l'],
+  counting: ['stk.counts', 'bool', false],
+  autoTempo: ['stk.auto', 'bool', true],
+  loop: ['stk.loop', 'bool', true],
+  chordFilter: ['stk.clf', ['used', 'maj', 'min', 'sev', 'all'], 'used'],
+};
+const SETTING_LS = Object.values(SETTINGS_MAP).map(x => x[0]);
+let setReady = false; /* after settings.js is applied, a changed setting means the file is out of date */
+const lsSet = (k, v) => { try { const ch = setReady && SETTING_LS.includes(k) && localStorage.getItem(k) !== String(v); localStorage.setItem(k, v); if (ch) localStorage.setItem('stk.setdirty', '1'); } catch (e) {} };
+const SHAPE_WORDS = ['root', '1st', '2nd'];
+/* settings.js: applied once each time its content changes (a new commit, or a hand edit). Changes made on the page after that
+   stay in this browser until you save a new settings.js and commit it. */
+const SetFile = (() => {
+  const raw = window.STK_SETTINGS && typeof window.STK_SETTINGS === 'object' ? window.STK_SETTINGS : null;
+  const sig = o => JSON.stringify({ c: o.chordShapes || {}, d: o.display || {} });
+  const F = raw && (raw.chordShapes || raw.display) ? raw : null;
+  let shapes = null;
+  if (F && sig(F) !== lsGet('stk.setfile')) {
+    const d = F.display || {};
+    Object.keys(SETTINGS_MAP).forEach(k => {
+      if (!(k in d)) return; const [ls, ok] = SETTINGS_MAP[k], v = d[k];
+      if (ok === 'bool') { if (typeof v === 'boolean') lsSet(ls, v ? '1' : '0'); } else if (ok.includes(v)) lsSet(ls, v);
+    });
+    shapes = F.chordShapes || {};
+    lsSet('stk.setfile', sig(F)); lsSet('stk.setdirty', '0');
+  }
+  setReady = true;
+  return { file: F, sig, takeShapes() { const x = shapes; shapes = null; return x; } };
+})();
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const dkey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1273,7 +1361,7 @@ const Mode = (() => {
 /* ---------------- progress store (one doc per user) ---------------- */
 const Store = (() => {
   const KEY = 'stk.progress.v1';
-  const blank = () => ({ v: 2, rush: {}, rhythm: {}, flash: 0, read: {}, songs: {}, day: {}, rg: {}, sg: {}, rv: {}, plan: {}, rec: {}, ifthen: '', last: {}, tempo: {} });
+  const blank = () => ({ v: 2, rush: {}, rhythm: {}, flash: 0, read: {}, songs: {}, day: {}, rg: {}, sg: {}, rv: {}, plan: {}, rec: {}, ifthen: '', last: {}, tempo: {}, inv: {} });
   let s = blank();
   try { const raw = lsGet(KEY); if (raw) s = Object.assign(blank(), JSON.parse(raw)); } catch (e) {}
   let ref = null, synced = false, writing = false, dirty = false, first = true, pt = null;
@@ -1295,6 +1383,7 @@ const Store = (() => {
   /* merge two copies: numbers take the larger, dates the later, objects merge key by key, other values keep the local one */
   function deep(a, b, key) {
     if (key === 'last' || key === 'tempo') return a && Object.keys(a).length ? a : b;
+    if (key === 'inv') return ((a && a.t) || 0) >= ((b && b.t) || 0) ? a : b; /* chord shapes: the newest choice wins */
     if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a)) { const o = Object.assign({}, b); Object.keys(a).forEach(k => { o[k] = k in b ? deep(a[k], b[k], k) : a[k]; }); return o; }
     if (typeof a === 'number' && typeof b === 'number') return Math.max(a, b);
     if (typeof a === 'string' && typeof b === 'string' && /^\d{4}-\d\d-\d\d$/.test(a) && /^\d{4}-\d\d-\d\d$/.test(b)) return a > b ? a : b;
@@ -1328,6 +1417,27 @@ const Store = (() => {
     best: (kind, lvl, n) => change(x => { x[kind][lvl] = Math.max(x[kind][lvl] || 0, n); }),
     flash: n => change(x => { x.flash = (x.flash || 0) + n; }),
   };
+})();
+
+/* ---------------- chord shapes chosen in the chord library ----------------
+   one choice per major/minor chord (by root key and quality, so G♯ and A♭ share it): 0 root position, 1 first inversion, 2 second inversion.
+   Seventh and diminished chords have their own choice too (a seventh chord's left hand plays root, third and seventh). */
+const Inv = (() => {
+  let ver = 0, last = null;
+  const key = c => c.root.pc + (c.minor ? 'm' : '') + (c.dim ? 'dim' : '') + (c.sev ? '7' : '');
+  const map = () => (Store.s.inv && Store.s.inv.v) || {};
+  function of(c) { if (!c) return null; const x = map()[key(c)]; return x === 1 || x === 2 ? x : 0; }
+  function check() { const j = JSON.stringify(map()); if (j !== last) { last = j; ver++; return true; } return false; }
+  function set(list) { Store.change(x => { const v = Object.assign({}, (x.inv && x.inv.v) || {}); list.forEach(([k, i]) => { if (i) v[k] = i; else delete v[k]; }); x.inv = { t: Date.now(), v }; }); lsSet('stk.setdirty', '1'); check(); }
+  /* chord shapes from settings.js: "Dm": "1st". Chords not listed there play in root position. */
+  const fromFile = SetFile.takeShapes();
+  if (fromFile) {
+    const v = {};
+    Object.keys(fromFile).forEach(n => { const c = chordInfo(n), i = SHAPE_WORDS.indexOf(String(fromFile[n]).toLowerCase()); if (c && i > 0) v[key(c)] = i; });
+    Store.change(x => { x.inv = { t: Date.now(), v }; }, true);
+  }
+  check();
+  return { of, set, key, check, get ver() { return ver; } };
 })();
 
 /* ---------------- automatic practice time ---------------- */
@@ -2933,21 +3043,22 @@ function chordInfo(name) {
   if (sev) { semis.push(10); steps.push(6); }
   const rootPc = pc(NAT[L] + a), li = LETTERS.indexOf(L);
   const tones = semis.map((s, i) => { const TL = LETTERS[(li + steps[i]) % 7]; let acc = pc(rootPc + s) - NAT[TL]; if (acc > 6) acc -= 12; if (acc < -6) acc += 12; return { L: TL, a: acc, pc: pc(rootPc + s) }; });
-  return { name, label: L + ACC(a) + (minor ? 'm' : dim ? 'dim' : '') + (sev ? '7' : ''), root: tones[0], tones, minor, sev };
+  return { name, label: L + ACC(a) + (minor ? 'm' : dim ? 'dim' : '') + (sev ? '7' : ''), root: tones[0], tones, minor, dim, sev };
 }
 const chordLabel = name => { const c = chordInfo(name); return c ? c.label : name; };
 /* place a spelled tone at a midi pitch */
 const toneAt = (t, m) => { const o = Math.floor((m - NAT[t.L] - t.a) / 12) - 1; return sp(t.L, t.a, o); };
 /* left-hand voicings. root: one low note; fifth: root + fifth; triad: three notes, nearest shape to the previous chord */
-function lhVoicing(name, mode, prev) {
+function lhVoicing(name, mode, prev, force) {
   const c = chordInfo(name); if (!c || mode === 'off' || mode === 'app') return [];
   const rootM = (() => { let m = 36 + c.root.pc; while (m < 43) m += 12; while (m > 54) m -= 12; return m; })();
   if (mode === 'root') return [{ p: toneAt(c.root, rootM), f: 5 }];
   if (mode === 'fifth') return [{ p: toneAt(c.root, rootM), f: 5 }, { p: toneAt(c.tones[2], rootM + (c.tones[2].pc - c.root.pc + 12) % 12), f: 1 }];
-  /* triad (seventh chords drop the fifth: root, third, seventh) */
+  /* triad (seventh chords drop the fifth: root, third, seventh). Major and minor chords use the shape chosen in the chord library, at the octave nearest the previous chord */
   const ts = c.sev ? [c.tones[0], c.tones[1], c.tones[3]] : c.tones.slice(0, 3);
-  const cands = [];
+  const cands = [], want = force != null ? force : Inv.of(c);
   for (let inv = 0; inv < 3; inv++) {
+    if (want != null && inv !== want) continue;
     const order = ts.slice(inv).concat(ts.slice(0, inv));
     for (let base = 40; base <= 56; base++) {
       if (pc(base) !== order[0].pc) continue;
@@ -3050,6 +3161,7 @@ function buildSong(raw) {
    map[chord id] = [{ id, off (beats from the chord), d, v: [{ p, f }] }] */
 const LH_MODES = ['root', 'fifth', 'triad', 'oompah', 'broken'];
 function lhFor(S, mode) {
+  if (S.lhVer !== Inv.ver) { S.lhCache = {}; S.lhVer = Inv.ver; }
   if (S.lhCache[mode]) return S.lhCache[mode];
   const map = {}; let prev = null; const roots = [];
   const cp = v => v.map(x => ({ p: x.p, f: x.f }));
@@ -4678,9 +4790,9 @@ function drawCourse() {
   const cb = $('#chordbtns'); cb.textContent = '';
   const used = []; SONGS.forEach(S => S.disp.forEach(b => b.chords.forEach(c => { if (!used.includes(c)) used.push(c); })));
   used.sort().forEach(name => {
-    const b = h('button', 'chordbtn'); const v = lhVoicing(name, 'triad', null);
+    const b = h('button', 'chordbtn');
     b.append(h('b', null, chordLabel(name)), h('span', null, chordInfo(name).tones.map(t => (naming === 'solf' ? SOLN[t.L] : t.L) + ACC(t.a)).join(' ')));
-    b.addEventListener('click', () => { Mode.stopAll(); const ms = v.map(x => x.p.m); Kb.ensure(ms); Kb.setHl(v.map(x => ({ m: x.p.m, tone: 'brass', finger: x.f }))); Seq.run([{ t: 0, dur: 1.3, notes: ms, vel: 0.6 }]); });
+    b.addEventListener('click', () => { Mode.stopAll(); const v = lhVoicing(name, 'triad', null), ms = v.map(x => x.p.m); Kb.ensure(ms); Kb.setHl(v.map(x => ({ m: x.p.m, tone: 'brass', finger: x.f }))); Seq.run([{ t: 0, dur: 1.3, notes: ms, vel: 0.6 }]); });
     cb.append(b);
   });
 }
@@ -4791,9 +4903,157 @@ function playPattern(mode, name) {
 $$('[data-prog]').forEach(b => b.addEventListener('click', () => playProg(b.dataset.prog.split(' '))));
 $$('[data-pat]').forEach(b => b.addEventListener('click', () => { const [m, n] = b.dataset.pat.split(':'); playPattern(m, n); }));
 
+/* ---------------- chord library: 12 major + 12 minor triads in three shapes ---------------- */
+const ChordLib = (() => {
+  const grid = $('#cl-grid'), note = $('#cl-note'), fseg = $('#cl-filter');
+  const MAJ = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+  const MIN = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
+  const EXTRA = ['A7', 'C7', 'D7', 'E7', 'G7', 'Edim'];
+  const mkE = name => { const c = chordInfo(name); return { name, c, key: Inv.key(c), minor: c.minor, other: !!(c.sev || c.dim) }; };
+  const LIB = MAJ.map(n => n).concat(MIN.map(n => n + 'm'), EXTRA).map(mkE);
+  /* sevenths or diminished chords from songs you add later join the library by themselves */
+  const addMissing = () => SONGS.forEach(S => S.disp.forEach(b => b.chords.forEach(name => { const c = chordInfo(name); if (c && !LIB.some(e => e.key === Inv.key(c))) LIB.push(mkE(name)); })));
+  const SHAPE = ['Root position', '1st inversion', '2nd inversion'];
+  const WH = range(21, 108, m => !isBlack(m));
+  let filter = lsGet('stk.clf') || 'used', playing = null;
+  const tn = t => (naming === 'solf' ? SOLN[t.L] : t.L) + ACC(t.a);
+  /* how often each chord appears in the songs (built-in and your own), and anything that is not a plain major/minor triad */
+  function usage() {
+    const u = {}, other = new Set();
+    SONGS.forEach(S => S.disp.forEach(b => b.chords.forEach(name => {
+      const c = chordInfo(name); if (!c) return;
+      const k = Inv.key(c), x = u[k] || (u[k] = { n: 0, songs: new Set(), names: new Set() });
+      x.n++; x.songs.add(S.short || S.t); x.names.add(c.label);
+    })));
+    return { u, other: [...other].sort() };
+  }
+  function mk(v, rootPc) {
+    const ms = v.map(x => x.p.m), lo = Math.min(...ms);
+    const s0 = clamp(WH.indexOf(isBlack(lo) ? lo - 1 : lo) - 1, 0, WH.length - 9), ws = WH.slice(s0, s0 + 9);
+    let s = '';
+    ws.forEach((m, i) => { s += `<rect class="w" x="${i * 10}" y="0" width="10" height="40" rx="1.2"/>`; });
+    ws.forEach((m, i) => { if (i < ws.length - 1 && isBlack(m + 1)) s += `<rect class="b" x="${i * 10 + 7}" y="0" width="6" height="25" rx="1"/>`; });
+    ms.forEach(m => { const i = ws.indexOf(isBlack(m) ? m - 1 : m); if (i < 0) return; const bk = isBlack(m); s += `<circle class="${pc(m) === rootPc ? 'r' : 'd'}${bk ? ' bk' : ''}" cx="${bk ? i * 10 + 10 : i * 10 + 5}" cy="${bk ? 19 : 33}" r="3.4"/>`; });
+    return `<svg class="mk" viewBox="0 0 90 40" aria-hidden="true">${s}</svg>`;
+  }
+  const voice = (name, i) => lhVoicing(name, 'triad', null, i);
+  function cardHtml(e, U) {
+    const sel = Inv.of(e.c), us = U[e.key], alias = us ? [...us.names].filter(n => n !== e.c.label) : [];
+    const songs = us ? [...us.songs] : [];
+    const useTxt = us ? `In <b>${songs.length}</b> ${songs.length === 1 ? 'song' : 'songs'}, ${us.n}× · ${esc(songs.slice(0, 3).join(', '))}${songs.length > 3 ? ' …' : ''}` : 'Not in your songs yet';
+    const shapes = [0, 1, 2].map(i => {
+      const v = voice(e.name, i), lab = e.c.label + ' ' + SHAPE[i];
+      return `<div class="shape${sel === i ? ' sel' : ''}" data-inv="${i}">
+        <button class="shape-play" type="button" data-ch="${e.name}" data-i="${i}" aria-label="Play ${esc(lab)}">${mk(v, e.c.root.pc)}<span class="shape-name">${SHAPE[i]}</span><span class="shape-notes">${v.map(x => esc(nameOf(x.p))).join(' ')}</span><span class="shape-f" title="Left-hand fingers, low to high">${v.map(x => x.f).join(' ')}</span></button>
+        <label class="use"><input type="checkbox" data-ch="${e.name}" data-i="${i}"${sel === i ? ' checked' : ''} aria-label="Use ${esc(lab)}">Use</label>
+      </div>`;
+    }).join('');
+    return `<article class="cl-card" data-key="${e.key}" ${us ? '' : 'data-unused="1"'}>
+      <div class="cl-head"><span class="cl-name">${esc(e.c.label)}</span>${alias.length ? `<span class="cl-alias">also ${esc(alias.join(', '))}</span>` : ''}<span class="cl-tones">${e.c.tones.map(tn).map(esc).join(' ')}</span><button class="btn small cl-hear" type="button" data-hear="${e.name}">▶ All 3</button></div>
+      <p class="cl-use" title="${esc(songs.join(', '))}">${useTxt}</p>
+      <div class="cl-shapes">${shapes}</div>
+    </article>`;
+  }
+  function render() {
+    addMissing(); const { u } = usage();
+    let list = LIB;
+    const anyUsed = LIB.some(e => u[e.key]);
+    let f = filter === 'used' && !anyUsed ? 'all' : filter;
+    if (f === 'used') list = LIB.filter(e => u[e.key]).sort((a, b) => u[b.key].n - u[a.key].n);
+    else if (f === 'maj') list = LIB.filter(e => !e.minor && !e.other);
+    else if (f === 'min') list = LIB.filter(e => e.minor && !e.other);
+    else if (f === 'sev') list = LIB.filter(e => e.other);
+    $$('button', fseg).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === f)));
+    grid.innerHTML = list.length ? list.map(e => cardHtml(e, u)).join('') : '<p class="cl-empty">No chords here.</p>';
+    status();
+    note.textContent = list.some(e => e.c.sev) ? 'Seventh chords have four notes (A7 = A C♯ E G). The left hand leaves out the 5th and plays root, 3rd and 7th, so each shape has three notes.' : '';
+  }
+  /* selection changed (here, or on another device): update ticks without rebuilding */
+  function refresh() {
+    status();
+    $$('.cl-card', grid).forEach(card => {
+      const e = LIB.find(x => x.key === card.dataset.key); if (!e) return; const sel = Inv.of(e.c);
+      $$('.shape', card).forEach(sh => { const on = +sh.dataset.inv === sel; sh.classList.toggle('sel', on); const cb = $('input', sh); if (cb) cb.checked = on; });
+    });
+  }
+  function changed() {
+    if (View.cur === 'chords') refresh();
+    if (View.cur === 'nigunim' && !Player.busy) Player.render();
+  }
+  function mark(el) { $$('.shape.playing', grid).forEach(x => x.classList.remove('playing')); if (el) el.classList.add('playing'); }
+  function play(name, i, el) {
+    Mode.stopAll(); const v = voice(name, i), ms = v.map(x => x.p.m), lab = chordLabel(name) + ', ' + SHAPE[i].toLowerCase();
+    Kb.ensure(ms); Kb.setHl(v.map(x => ({ m: x.p.m, tone: 'brass', finger: x.f }))); mark(el);
+    const tool = { stop() { Seq.stop(); Kb.clear(); mark(null); } };
+    Mode.set(tool, lab + ': ' + v.map(x => nameOf(x.p)).join(' '));
+    /* a quick roll from the bottom, then the chord held, so you hear each note and the whole shape */
+    Seq.run(ms.map((m, k) => ({ t: k * 0.12, dur: 1.6 - k * 0.12, notes: [m], vel: 0.6 })).concat([{ t: 1.8, dur: 0 }]), () => { mark(null); Mode.clear(tool); });
+  }
+  function playAll(name, card) {
+    Mode.stopAll(); const vs = [0, 1, 2].map(i => voice(name, i)), step = 1.3;
+    Kb.ensure(vs.flat().map(x => x.p.m));
+    const tool = { stop() { Seq.stop(); Kb.clear(); mark(null); } };
+    Mode.set(tool, chordLabel(name) + ' in three shapes');
+    const evs = vs.map((v, k) => ({ t: k * step, dur: step * 0.92, notes: v.map(x => x.p.m), vel: 0.6, vis: () => { Kb.setHl(v.map(x => ({ m: x.p.m, tone: 'brass', finger: x.f }))); mark($(`.shape[data-inv="${k}"]`, card)); Mode.label(chordLabel(name) + ', ' + SHAPE[k].toLowerCase() + ': ' + v.map(x => nameOf(x.p)).join(' ')); } }));
+    evs.push({ t: vs.length * step, dur: 0 });
+    Seq.run(evs, () => { mark(null); Mode.clear(tool); });
+  }
+  grid.addEventListener('click', e => {
+    const p = e.target.closest('.shape-play'); if (p) { play(p.dataset.ch, +p.dataset.i, p.closest('.shape')); return; }
+    const a = e.target.closest('[data-hear]'); if (a) playAll(a.dataset.hear, a.closest('.cl-card'));
+  });
+  grid.addEventListener('change', e => {
+    const cb = e.target.closest('input[data-ch]'); if (!cb) return;
+    if (!cb.checked) { cb.checked = true; return; } /* one shape is always in use: tick another one to switch */
+    const name = cb.dataset.ch, i = +cb.dataset.i, c = chordInfo(name);
+    Inv.set([[Inv.key(c), i]]); refresh(); changed();
+    play(name, i, cb.closest('.shape'));
+  });
+  fseg.addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (!b) return; filter = b.dataset.v; lsSet('stk.clf', filter); render(); });
+  $$('[data-clall]').forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.clall;
+    if (!confirm('Use the ' + SHAPE[i].toLowerCase() + ' for every chord? Your single choices are replaced.')) return;
+    Inv.set(LIB.map(e => [e.key, i])); refresh(); changed();
+  }));
+  /* ---- settings.js: write the current settings ---- */
+  const setStatus = $('#set-status');
+  function status() {
+    const F = SetFile.file, when = F && F.saved ? new Date(F.saved).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const dirty = lsGet('stk.setdirty') === '1';
+    if (!F) setStatus.textContent = 'No saved settings.js yet. Save one into the site folder (next to index.html), then commit and push it.';
+    else if (dirty) setStatus.textContent = 'You changed settings since settings.js' + (when ? ' (' + when + ')' : '') + '. Save a new file and commit it to keep them on every device.';
+    else setStatus.textContent = 'Using settings.js' + (when ? ', saved ' + when : '') + '. Same settings on every device.';
+  }
+  function fileText() {
+    const display = {};
+    Object.keys(SETTINGS_MAP).forEach(k => { const [ls, ok, def] = SETTINGS_MAP[k], v = lsGet(ls); display[k] = ok === 'bool' ? (v == null ? def : v === '1') : (v != null && ok.includes(v) ? v : def); });
+    const chordShapes = {}; addMissing(); LIB.forEach(e => { chordShapes[e.name] = SHAPE_WORDS[Inv.of(e.c) || 0]; });
+    const o = { saved: new Date().toISOString(), chordShapes, display };
+    return { o, text: `/* Staff to Keys settings. The page reads this file every time it opens, on any browser and device.
+   Change it on the Chords page ("Save settings file") or edit the values here, then commit and push.
+   chordShapes: "root" = root position, "1st" = 1st inversion, "2nd" = 2nd inversion.
+   display: noteNames letter|solf · keyLabels all|c|off · keyGlow on|stuck|off · fingers all|shift|off ·
+   noteSize s|m|l · counting, autoTempo, loop true|false · chordFilter used|maj|min|sev|all */
+window.STK_SETTINGS = ${JSON.stringify(o, null, 2)};
+` };
+  }
+  $('#set-save').addEventListener('click', async () => {
+    const { o, text } = fileText(), blob = new Blob([text], { type: 'text/javascript' });
+    let saved = false;
+    if (window.showSaveFilePicker) {
+      try { const fh = await window.showSaveFilePicker({ suggestedName: 'settings.js', types: [{ description: 'Settings file', accept: { 'text/javascript': ['.js'] } }] }); const w = await fh.createWritable(); await w.write(blob); await w.close(); saved = true; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    if (!saved) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'settings.js'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+    lsSet('stk.setfile', SetFile.sig(o)); lsSet('stk.setdirty', '0');
+    setStatus.textContent = (saved ? 'Saved settings.js.' : 'Downloaded settings.js.') + ' Put it next to index.html (replace the old one), then commit and push. Every device then opens with these settings.';
+  });
+  return { render, refresh, changed };
+})();
+
 /* ---------------- views ---------------- */
 const View = (() => {
-  const names = ['today', 'nigunim', 'drills', 'plan', 'learn'];
+  const names = ['today', 'nigunim', 'drills', 'chords', 'plan', 'learn'];
   let cur = null;
   function go(v, keep) {
     if (!names.includes(v)) v = 'today';
@@ -4807,6 +5067,7 @@ const View = (() => {
     if (v === 'today') Today.render();
     if (v === 'nigunim') requestAnimationFrame(() => Player.render());
     if (v === 'plan') Plan.render();
+    if (v === 'chords') ChordLib.render();
   }
   window.addEventListener('hashchange', () => { const v = location.hash.slice(1); if (names.includes(v)) go(v); else { const el = document.getElementById(v); if (el) { const sec = el.closest('.view'); if (sec) { go(sec.dataset.view, true); el.scrollIntoView({ block: 'start' }); } } } });
   $$('#nav-links a, .brand').forEach(a => a.addEventListener('click', e => { const v = (a.getAttribute('href') || '').slice(1); if (names.includes(v)) { e.preventDefault(); go(v); } }));
@@ -5051,7 +5312,7 @@ window.addEventListener('keydown', e => {
 function setNaming(n) {
   naming = n; lsSet('stk.naming', n);
   $('#nm-letter').setAttribute('aria-pressed', String(n === 'letter')); $('#nm-solf').setAttribute('aria-pressed', String(n === 'solf'));
-  Kb.render(); drawCourse(); drawMap(); Player.render(); Drill.relabel();
+  Kb.render(); drawCourse(); drawMap(); Player.render(); Drill.relabel(); if (View.cur === 'chords') ChordLib.render();
 }
 $('#nm-letter').addEventListener('click', () => setNaming('letter'));
 $('#nm-solf').addEventListener('click', () => setNaming('solf'));
@@ -5091,6 +5352,7 @@ const MyUI = (() => {
 })();
 Store.on((s, synced) => {
   MySongs.sync();
+  if (Inv.check()) ChordLib.changed();
   const sy = $('#sync'); sy.textContent = synced ? 'Synced to your account' : 'Saved in this browser'; sy.classList.toggle('on', !!synced);
   if (View.cur === 'today') Today.render();
   if (View.cur === 'nigunim' && !Player.busy) Player.renderSide();
@@ -5100,7 +5362,7 @@ if (!Store.s.start) Store.change(x => { x.start = today(); }, true);
 setNaming(naming);
 (() => { const L = Store.s.last || {}; Player.select(L.song && songById(L.song) ? L.song : 'chamol'); })();
 View.go(location.hash.slice(1) || 'today', true);
-window.__stk = { SONGS, Player, Store, Kb, Drill, runSpec, Sess, Today, View, Mode };
+window.__stk = { SONGS, Player, Store, Kb, Drill, runSpec, Sess, Today, View, Mode, Inv, ChordLib };
 Store.connect();
 /* sound: wake the audio engine on every gesture; if the browser keeps it off, show a "Turn sound on" button */
 (() => {
