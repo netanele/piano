@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Staff to Keys</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Figtree:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Figtree:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Frank+Ruhl+Libre:wght@400;500;600;700&family=Noto+Sans+Hebrew:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Music&text=%F0%9D%84%9E%F0%9D%84%A2%E2%99%AF%E2%99%AD%E2%99%AE%F0%9D%84%BB%F0%9D%84%BC%F0%9D%84%BD%F0%9D%84%BE%F0%9D%84%BF&display=block">
 <style>
 
@@ -35,6 +35,8 @@
 }
 
 *,*::before,*::after{box-sizing:border-box}
+/* never fake a bold: a weight a font does not have is drawn smeared and blurry, so use the nearest real weight instead */
+html{font-synthesis:style;font-synthesis-weight:none}
 html{scroll-behavior:smooth;scroll-padding-top:72px}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-inline:16px;padding-bottom:calc(var(--dock-h) + 40px)}
 h1,h2,h3,h4{margin:0;text-wrap:balance}
@@ -408,7 +410,9 @@ g.n.cur .lh-f{stroke:var(--felt);stroke-width:3}
   --staff:#3B2C1D;--paper:#F7F0E1;
   --oct1:#35271A;--oct2:#5A381C;--oct3:#F0A196;--oct4:#FFFFFF;--oct5:#9DC5E8;--oct6:#D9A62E;
   --ebony:#1F1913;--ebony-2:#2D251C;--ebony-line:#40352A;--on-ebony:#F1E6D0;--on-ebony-2:#B9A88C;
-  --f-display:'DM Serif Display',Georgia,serif;--f-body:'Lora',Georgia,serif;--f-head:'Figtree',system-ui,sans-serif;
+  /* Hebrew has its own fonts with real weights (Lora, DM Serif and Plex Mono have no Hebrew letters) */
+  --f-display:'DM Serif Display','Frank Ruhl Libre',Georgia,serif;--f-body:'Lora','Frank Ruhl Libre',Georgia,serif;--f-head:'Figtree','Noto Sans Hebrew',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono','Noto Sans Hebrew',ui-monospace,'SF Mono',Menlo,monospace;
   color-scheme:light;
 }
 body{background-color:var(--bg);background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%27180%27%20height%3D%27180%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%27.7%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27/%3E%3CfeColorMatrix%20values%3D%270%200%200%200%20.4%200%200%200%200%20.28%200%200%200%200%20.12%200%200%200%20.12%200%27/%3E%3C/filter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url%28%23n%29%27/%3E%3C/svg%3E");font-synthesis:none}
