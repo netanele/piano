@@ -7,7 +7,7 @@
    noteSize s|m|l · counting, autoTempo, loop true|false · chordFilter used|maj|min|sev|all
    other: last song, tempos and similar. progress: practice days, stars, plan ticks, your added songs. */
 window.STK_SETTINGS = {
-  "saved": "2026-10-05T18:12:35.528Z",
+  "saved": "2026-10-05T18:14:57.364Z",
   "chordShapes": {
     "C": "2nd",
     "Db": "2nd",
@@ -69,7 +69,7 @@ window.STK_SETTINGS = {
         "n": 0
       },
       "2026-10-05": {
-        "s": 1830,
+        "s": 1875,
         "c": 0,
         "r": 0,
         "n": 0
