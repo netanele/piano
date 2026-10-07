@@ -33,7 +33,7 @@ def check(s, src):
     if errs: return errs
     if s['group'] not in GROUPS: errs.append('group must be "ai" (the "AI created" section)')
     if not re.match(r'^[a-z0-9-]+$', s['id']): errs.append('id should be lowercase letters, digits, dashes')
-    if re.search(r'["\']?id["\']?\s*:\s*["\']%s["\']' % re.escape(s['id']), src): errs.append('id "%s" is already used' % s['id'])
+    if re.search(r'"id":\s*"%s",\s*"t":' % re.escape(s['id']), src): errs.append('id "%s" is already used' % s['id'])
     if not 1 <= s['lev'] <= 5: errs.append('lev must be 1-5')
     if len(s['warm']) != 5: errs.append('warm should list 5 notes')
     meter, ids = s['time'], set()
@@ -55,6 +55,31 @@ def check(s, src):
         if f not in ids: errs.append('form uses unknown section "%s"' % f)
     return errs
 
+def notes(n):
+    out = []
+    for tok in n.split():
+        m = TOK.match(tok)
+        if m and m.group(1) != 'R': out.append((m.group(1), m.group(2)))
+    return out
+
+def copied(s, src):
+    """Runs of 5 notes (same pitches and lengths) or whole bars of 4+ notes that already exist in another song."""
+    old5, oldbars = set(), set()
+    for n in re.findall(r'"n":\s*"([^"]*)"', src):
+        for b in n.split('|'):
+            ns = notes(b)
+            if len(ns) >= 4: oldbars.add(tuple(ns))
+        ns = notes(n.replace('|', ' '))
+        old5.update(tuple(ns[i:i + 5]) for i in range(len(ns) - 4))
+    errs = []
+    for x in s['sec']:
+        for i, b in enumerate(x['n'].split('|')):
+            if tuple(notes(b)) in oldbars: errs.append('section %s bar %d is identical to a bar of an existing song' % (x['id'], i + 1))
+        ns = notes(x['n'].replace('|', ' '))
+        for i in range(len(ns) - 4):
+            if tuple(ns[i:i + 5]) in old5: errs.append('section %s: the run %s already appears in an existing song' % (x['id'], ' '.join('/'.join(t) for t in ns[i:i + 5])))
+    return sorted(set(errs))
+
 def main():
     a = [x for x in sys.argv[1:] if not x.startswith('--')]
     if not a: sys.exit(__doc__)
@@ -62,6 +87,7 @@ def main():
     path = a[1] if len(a) > 1 else 'index.html'
     src = open(path, encoding='utf-8').read()
     errs = check(song, src)
+    if not errs: errs = copied(song, src)
     if errs: print('NOT ADDED. Fix these:'); [print(' -', e) for e in errs]; sys.exit(1)
     n = sum(len(x['n'].split('|')) for x in song['sec'])
     print('OK: "%s", %d sections, %d bars, form %s' % (song['t'], len(song['sec']), n, ' '.join(song['form'])))

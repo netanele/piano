@@ -37,15 +37,15 @@ Modeled on the two real Baal HaSulam nigunim already in the app (`chamol` and `p
 
 - **Mode and colour change:** start in a minor or freygish colour (e.g. A freygish with B♭ and C♯ inside D minor, or plain D minor), then a later part **opens up into the major** (D major) or climbs to the high register for a bright, uplifted section. Pick one: minor-only and inward (like Pitchu Li), or freygish → major (like Chamol).
 - **Chords:** D minor with the descending B♭–C–Dm cadence, Gm–A7–Dm, A7 as the turn-back chord; in the major part D–G–A7.
-- **Rhythm:** a run of 8th notes falling by step that lands on a long held note (half or dotted half) — "quick words, then a long sigh". Repeated notes on the same pitch for declaiming the words (`D5/q D5/q F5/q`). Dotted 8th + 16th pick-ups into the next phrase (`D5/8. E5/16`). Short rests inside a phrase as breaths.
+- **Rhythm:** a run of 8th notes falling by step that lands on a long held note (half or dotted half) — "quick words, then a long sigh". Repeated notes on the same pitch for declaiming the words (several quarter notes on one note, then a step). Dotted 8th + 16th pick-ups leading into the next phrase. Short rests inside a phrase as breaths.
 - **Form:** a refrain part that comes back between new parts (e.g. A, B, C, B, D, B — vary the refrain's first bar a little each time), and/or parts with first and second endings: give the ending sections `"volta": 1` / `"volta": 2` and list them in `form` right after their part (e.g. `"A", "A-end1", "A", "A-end2"`).
-- **Meter:** mostly 4/4, with an occasional `[3/4]` bar to stretch a phrase (switch back with `[4/4]`). A triplet ornament (`T3[ C5/16 D5/16 C5/16 ]`) here and there.
-- Tempo 72–84, 3–4 parts, 8 bars each (an ending section is 1 bar). Words: a psalm verse or a short piyyut line.
+- **Meter:** mostly 4/4, with an occasional `[3/4]` bar to stretch a phrase (switch back with `[4/4]`). A quick triplet turn (`T3[ ... ]` of three 16ths) here and there.
+- Tempo 72–84, 3–4 parts of about 8 bars (an ending section is 1 bar, no `lab` needed). It may climb to A5/B5 in the bright part. For `warm`, use the five notes of the opening part. Words: a psalm verse or a short piyyut line.
 - Write `by` as "Original tune in the style of Baal HaSulam's nigunim" — an original tune must not appear under his name.
 
 Writing tips that make it sound right and stay learnable:
-- 2–3 parts (A, B, C), 4 or 8 bars each. `form` decides what actually plays, so list a part twice to play it twice; `"rep": 1` only draws repeat signs on the sheet, so add it to the parts you list twice.
-- Range about one and a half octaves, mostly C4–F5, mostly steps with a few leaps of a 3rd/4th/5th.
+- Unless the style above says otherwise: 2–3 parts (A, B, C), 4 or 8 bars each. `form` decides what actually plays, so list a part twice to play it twice; `"rep": 1` only draws repeat signs on the sheet, so add it to the parts you list twice.
+- Range about one and a half octaves, mostly C4–F5 (a style may go higher), mostly steps with a few leaps of a 3rd/4th/5th.
 - Give each part a mood (e.g. calm → dark → confident) and say so in `about`.
 - Ornaments as short 16th-note turns (`B4/16 C5/16`), sparingly.
 - Final note of the song is the mode's home note, held long.
@@ -83,20 +83,20 @@ Field notes:
 - `warm`: the 5 notes under the right hand (thumb to pinky) for the warm-up; `warmName` names them.
 - `pick`: optional pick-up bar (shorter than a full bar), e.g. `"A4/8"`.
 
-Note format (`n`): bars separated by `|`. Token = `<pitch>/<dur>[/<finger>][~]`, pitch like `C#5`, `Bb4`, or `R` for a rest. Durations: `w h. h q. q 8. 8 16`. `~` ties to the next note. `[3/4]` at the start of a bar changes the meter; `T3[ ... ]` is a triplet. Every bar must add up exactly to the meter.
+Note format (`n`): bars separated by `|`. Token = `<pitch>/<dur>[/<finger>][~]`, pitch like `C#5`, `Bb4`, or `R` for a rest. Durations: `w h. h q. q 8. 8 16`. `~` ties to the next note. `[3/4]` at the start of a bar changes the meter until the next change, even into the next section, so switch back with `[4/4]`; `T3[ ... ]` is a triplet. Every bar must add up exactly to the meter.
 
-Chords (`c`): one `|`-separated group per bar, 1–2 chords per bar, names matching `^[A-G](b|#)?(m|dim)?7?$` (e.g. `E`, `Am`, `Bb`, `F#dim`, `A7`). Choose chords that contain the melody's strong-beat notes.
+Chords (`c`): one `|`-separated group per bar, 1–2 chords per bar, names matching `^[A-G](b|#)?(m|dim)?7?$` (e.g. `E`, `Am`, `Bb`, `F#dim`, `A7`). Two chords in a bar split it in half. Choose chords that contain the melody's strong-beat notes.
 
 ## 4. Check and add it
 
-Run the bundled script from the repo root. It checks every bar's length, chord names, bar counts, form, unique id, and then appends the song to the end of `NIGUNIM`:
+Run the bundled script from the repo root. It checks every bar's length, chord names, bar counts, form and unique id, makes sure no bar or 5-note run (same pitches and lengths) is copied from any song already in the app, and then appends the song to the end of `NIGUNIM`:
 
 ```bash
 python3 -I .claude/skills/compose-nigun/scripts/add_song.py <song.json> index.html --check   # check only
 python3 -I .claude/skills/compose-nigun/scripts/add_song.py <song.json> index.html           # check + add
 ```
 
-The second argument can be any copy of index.html (handy for trying things out). If it prints "NOT ADDED", fix the listed problems and rerun. After adding, it also checks that the page's script still parses ("Page script check: OK"); if that fails, undo with `git checkout index.html` and look again.
+The second argument can be any copy of index.html (handy for trying things out). If it prints "NOT ADDED", fix the listed problems (for copied runs, rewrite that phrase, not just one note) and rerun. The script can't judge range, whether the chords fit, or the ending note, so check those yourself. After adding, it also checks that the page's script still parses ("Page script check: OK"); if that fails, undo with `git checkout index.html` and look again.
 
 ## 5. Tell the user
 
