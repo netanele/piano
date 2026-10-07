@@ -21,8 +21,9 @@ def bars(src, meter):
             if m: meter = int(m.group(1)); continue
             if tok == 'T3[': depth += 1; continue
             if tok == ']': depth -= 1; continue
-            if not TOK.match(tok): errs.append('bad note "%s"' % tok); continue
-            t += DURS[tok.split('/')[1]] * (2 / 3) ** depth
+            m = TOK.match(tok)
+            if not m: errs.append('bad note "%s"' % tok); continue
+            t += DURS[m.group(2)] * (2 / 3) ** depth
         out.append((round(t, 4), meter, errs))
     return out, meter
 
