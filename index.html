@@ -3222,7 +3222,7 @@ const NIGUNIM = [
 "short": "Mizmor 23",
 "he": "מזמור לדוד",
 "by": "Original tune in Sephardic-Andalusian style",
-"group": "jew",
+"group": "ai",
 "attrib": "",
 "attribText": "A new melody written for this page in the Sephardic-Andalusian style (E freygish, the Arabic “Hijaz” sound). The words are Psalm 23.",
 "credit": "",
@@ -4559,7 +4559,7 @@ const Player = (() => {
   }
   function renderLib() {
     const box = $('#lib'); box.textContent = '';
-    const GROUPS = [['bh', 'Baal HaSulam (בעל הסולם)'], ['rabash', 'Rabash (רב״ש)'], ['bst', 'Baal Shem Tov (בעל שם טוב)'], ['ar', 'Chabad (חב״ד)'], ['jew', 'Jewish & Israeli songs (שירי ישראל)'], ['classic', 'Classics'], ['my', 'My songs']];
+    const GROUPS = [['bh', 'Baal HaSulam (בעל הסולם)'], ['rabash', 'Rabash (רב״ש)'], ['bst', 'Baal Shem Tov (בעל שם טוב)'], ['ar', 'Chabad (חב״ד)'], ['jew', 'Jewish & Israeli songs (שירי ישראל)'], ['classic', 'Classics'], ['ai', 'AI created'], ['my', 'My songs']];
     GROUPS.forEach(([g, name]) => {
       const songs = SONGS.filter(s => s.group === g); if (!songs.length) return;
       box.append(h('div', 'lib-h', name));
